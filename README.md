@@ -86,15 +86,34 @@ cat /dev/cu.usbmodemXXXX
 
 ## Flashing over SWD (optional)
 
-A Raspberry Pi Debug Probe on the badge's SWD port can flash over the debug
+A Raspberry Pi Debug Probe on the badge's SWD port can load over the debug
 interface instead of UF2:
 
 ```sh
-probe-rs download --chip RP235x hello.elf
+make run-swd     # flash, reset, and run (recommended)
+make flash-swd   # flash only - leaves the core halted
 ```
 
-**Note:** probe-rs 0.32 requires debug-probe firmware ≥ 2.2.0. Older probes
-fail with *"firmware on the probe is outdated"*. Update the probe firmware from
+`make run-swd` holds the terminal open (it streams RTT/log output and must
+stay attached), so run it in its own session; `make monitor` still works in
+another terminal.
+
+**`probe-rs download` writes flash but does not reset the chip.** The core is
+left halted, so the program never starts: no LED, no USB enumeration, and
+nothing for the monitor to read. If you see "no traffic" after flashing over
+SWD, this is why — use `run-swd`.
+
+**Watching serial output.** With the debug probe attached there are two USB
+serial devices:
+
+- the badge's own USB-CDC (the program's `fmt.Printf` output), and
+- the debug probe's UART bridge.
+
+`tinygo monitor` guesses between them; if it picks the wrong one, pass the
+port explicitly (`make monitor` then `-port`, or `cat /dev/cu.usbmodemXXXX`).
+
+**Probe firmware:** probe-rs 0.32 requires debug-probe firmware ≥ 2.2.0. Older
+probes fail with *"firmware on the probe is outdated"*. Update from
 <https://github.com/raspberrypi/debugprobe/releases>, or just use UF2, which
 needs no extra tooling.
 
