@@ -1,0 +1,8 @@
+{
+    "inherits": ["rp2350b"],
+    "build-tags": ["sycl_badge_v2"],
+    "serial-port": ["2e8a:000a"],
+    "serial": "usb",
+    "default-stack-size": 8192,
+    "msd-firmware-name": "firmware.uf2"
+}
