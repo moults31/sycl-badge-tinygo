@@ -42,7 +42,8 @@ scratch space, re-synced on every build.
 
 ## Prerequisites
 
-- TinyGo 0.42.0 or newer.
+- TinyGo 0.42.0 or newer, with Go 1.25–1.27 on `PATH` (TinyGo reuses the
+  system Go toolchain).
   - Homebrew: `brew tap tinygo-org/tools && brew install tinygo`
   - Or the release tarball from
     <https://github.com/tinygo-org/tinygo/releases> (macOS Homebrew's bottle
