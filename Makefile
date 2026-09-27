@@ -4,6 +4,8 @@ BOARD_SRC  := targets/board_sycl_badge_v2.go
 BOARD_DST  := $(TINYGOROOT)/src/machine/board_sycl_badge_v2.go
 UF2_VOLUME := /Volumes/RP2350
 PROBE_CHIP := RP235x
+# Override to pick a specific port, e.g. `make monitor PORT=/dev/cu.usbmodem2101`
+PORT       ?=
 
 .PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size
 
@@ -45,8 +47,11 @@ flash-swd: build
 run-swd: build
 	probe-rs run --chip $(PROBE_CHIP) hello.elf
 
+# The badge shares its USB VID:PID (2e8a:000a) with other RP2350 boards, and
+# the debug probe adds a second USB serial port. Pass -target so TinyGo knows
+# this board's VID:PID, and -port to disambiguate if needed.
 monitor:
-	tinygo monitor
+	tinygo monitor -target=$(TARGET) $(if $(PORT),-port=$(PORT),)
 
 clean: uninstall-board
 	rm -f hello.uf2 hello.elf

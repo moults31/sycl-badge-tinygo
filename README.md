@@ -78,7 +78,24 @@ hello from SYCL Badge V2 #1
 ...
 ```
 
-On macOS the port looks like `/dev/cu.usbmodem*`; `make monitor` finds it, or:
+On macOS the port looks like `/dev/cu.usbmodem*`. `make monitor` finds it:
+
+```sh
+make monitor                              # uses this target's VID:PID
+make monitor PORT=/dev/cu.usbmodemXXXX    # or pick the port explicitly
+```
+
+`make monitor` passes `-target`, which matters: the badge's USB VID:PID
+(`2e8a:000a`) is shared with other RP2350 boards, so without `-target` TinyGo
+sees every USB serial port (the badge *and* the debug probe's UART bridge) and
+refuses to guess:
+
+```
+multiple serial ports available - use -port flag, available ports are
+/dev/cu.usbmodem11402, /dev/cu.usbmodem2101
+```
+
+You can always bypass TinyGo's monitor and read the port directly:
 
 ```sh
 cat /dev/cu.usbmodemXXXX
@@ -104,13 +121,9 @@ nothing for the monitor to read. If you see "no traffic" after flashing over
 SWD, this is why — use `run-swd`.
 
 **Watching serial output.** With the debug probe attached there are two USB
-serial devices:
-
-- the badge's own USB-CDC (the program's `fmt.Printf` output), and
-- the debug probe's UART bridge.
-
-`tinygo monitor` guesses between them; if it picks the wrong one, pass the
-port explicitly (`make monitor` then `-port`, or `cat /dev/cu.usbmodemXXXX`).
+serial devices: the badge's own USB-CDC (the program's `fmt.Printf` output)
+and the debug probe's UART bridge. `make monitor` selects the badge via
+`-target`; if that ever picks wrong, pass `PORT=/dev/cu.usbmodemXXXX`.
 
 **Probe firmware:** probe-rs 0.32 requires debug-probe firmware ≥ 2.2.0. Older
 probes fail with *"firmware on the probe is outdated"*. Update from
