@@ -24,9 +24,12 @@ jobs:
         run: |
           set -euo pipefail
           url="https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo${TINYGO_VERSION}.linux-amd64.tar.gz"
+          mkdir -p "$HOME/toolchain"
           curl -fsSL "$url" -o /tmp/tinygo.tar.gz
-          sudo tar -C /usr/local -xzf /tmp/tinygo.tar.gz
-          echo "/usr/local/tinygo/bin" >> "$GITHUB_PATH"
+          # Install into a user-writable prefix: the build copies the board
+          # file into $TINYGOROOT/src/machine, which fails under /usr/local.
+          tar -C "$HOME/toolchain" -xzf /tmp/tinygo.tar.gz
+          echo "$HOME/toolchain/tinygo/bin" >> "$GITHUB_PATH"
 
       - name: Show version
         run: tinygo version
@@ -77,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -87,6 +90,6 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
