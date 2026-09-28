@@ -20,7 +20,7 @@ OCD := $(OPENOCD) -f $(OCD_INTERFACE) -f $(OCD_TARGET) -c "adapter speed $(OCD_S
 # Override to pick a specific port, e.g. `make monitor PORT=/dev/cu.usbmodem2101`
 PORT       ?=
 
-.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd
+.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim test
 
 all: build
 
@@ -41,6 +41,16 @@ build: install-board
 
 size: install-board
 	tinygo build -target=$(TARGET) -size=short -o /dev/null .
+
+# Host-side build of the cartridge runtime (no machine package involved):
+# runs the scripted menu/plasma/panic scenario and writes PNG frames.
+SIM_OUT ?= sim-out
+sim:
+	go run ./cmd/sim -out $(SIM_OUT)
+
+# Host-side unit tests for the cartridge runtime.
+test:
+	go test ./cartridge/...
 
 # Mass-storage load: the badge mounts as RP2350 when held in BOOTSEL mode
 # (hold RESET + BOOT_SEL, release RESET, release BOOT_SEL).

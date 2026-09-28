@@ -2,19 +2,20 @@ package main
 
 import (
 	"fmt"
-	"time"
+
+	"sycl-badge-tinygo/cartridge"
 )
 
 func main() {
 	fmt.Println("boot: initializing display")
 	lcdInit()
-	fmt.Println("boot: display configured, drawing gopher")
-	showGopher()
-	fmt.Println("boot: gopher drawn")
+	fmt.Println("boot: display ready, starting cartridge runtime")
 
-	// The image is now static on the panel. Stay alive so the USB-CDC port
-	// remains enumerated.
-	for {
-		time.Sleep(time.Second)
+	lib := []cartridge.Factory{
+		{Name: "PLASMA", New: cartridge.NewPlasma},
+		{Name: "PANIC TEST", New: cartridge.NewPanicTest},
 	}
+	runner := cartridge.NewRunner(selectEnv(), lcdDisplay{}, lib)
+	runner.SetLogger(func(m string) { fmt.Println(m) })
+	runner.Run()
 }

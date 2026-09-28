@@ -20,6 +20,10 @@ const (
 	lcdMOSI = machine.GPIO19
 	lcdDC   = machine.GPIO21
 	lcdBL   = machine.GPIO16
+
+	// The panel and wiring tolerate the reference firmware's 62.5 MHz, which
+	// keeps a full 160x128 frame (40 KB) under the 60 fps budget.
+	lcdSPIFreq = 62_500_000
 )
 
 // ST7735S command set used by the init sequence.
@@ -78,7 +82,7 @@ func lcdInit() {
 	// and, more importantly, the zero value (GPIO0) would otherwise be claimed
 	// by the SPI peripheral. GPIO16 is the backlight, not SPI0 RX.
 	machine.SPI0.Configure(machine.SPIConfig{
-		Frequency: 12_000_000,
+		Frequency: lcdSPIFreq,
 		SCK:       lcdSCK,
 		SDO:       lcdMOSI,
 		SDI:       machine.NoPin,
@@ -183,6 +187,30 @@ func lcdDrawBitmap(x, y int16, data []byte, w, h int16) {
 	dcPin.High()
 	csPin.Low()
 	machine.SPI0.Tx(data, nil)
+	csPin.High()
+}
+
+// lcdRowBuf is the reusable row staging buffer for lcdPresent, so presenting a
+// frame allocates nothing.
+var lcdRowBuf [panelWidth * 2]byte
+
+// lcdPresent flushes a full 160x128 standard-RGB565 frame (row-major, index
+// y*panelWidth+x) to the panel in one windowed write, high byte first. It is
+// the single SPI touch point for the cartridge runtime.
+func lcdPresent(frame []uint16) {
+	lcdSetWindow(0, 0, panelWidth-1, panelHeight-1)
+
+	dcPin.High()
+	csPin.Low()
+	for y := 0; y < panelHeight; y++ {
+		off := y * panelWidth
+		for x := 0; x < panelWidth; x++ {
+			v := frame[off+x]
+			lcdRowBuf[2*x] = byte(v >> 8)
+			lcdRowBuf[2*x+1] = byte(v)
+		}
+		machine.SPI0.Tx(lcdRowBuf[:], nil)
+	}
 	csPin.High()
 }
 

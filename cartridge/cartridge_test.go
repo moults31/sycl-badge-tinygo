@@ -1,0 +1,146 @@
+package cartridge
+
+import (
+	"strings"
+	"testing"
+)
+
+type fakeEnv struct {
+	cur  Buttons
+	t    uint32
+	step uint32
+}
+
+func (e *fakeEnv) Buttons() Buttons { return e.cur }
+func (e *fakeEnv) Millis() uint32   { return e.t }
+func (e *fakeEnv) Sleep(ms uint32)  { e.t += ms }
+
+type fakeDisplay struct {
+	last   []uint16
+	frames int
+}
+
+func (d *fakeDisplay) Present(f []uint16) {
+	d.last = append(d.last[:0], f...)
+	d.frames++
+}
+
+func newTestRunner(lib []Factory) (*Runner, *fakeEnv, *fakeDisplay) {
+	env := &fakeEnv{step: 16}
+	disp := &fakeDisplay{}
+	r := NewRunner(env, disp, lib)
+	r.SetFrameMillis(16)
+	return r, env, disp
+}
+
+func step(env *fakeEnv, r *Runner, b Buttons, n int) {
+	env.cur = b
+	for i := 0; i < n; i++ {
+		r.Step()
+	}
+}
+
+func plasmaLib() []Factory {
+	return []Factory{
+		{Name: "PLASMA", New: NewPlasma},
+		{Name: "PANIC TEST", New: NewPanicTest},
+	}
+}
+
+func TestLaunchExitAndRelaunch(t *testing.T) {
+	r, env, _ := newTestRunner(plasmaLib())
+
+	step(env, r, Buttons{}, 3)
+	if r.state != stMenu {
+		t.Fatalf("expected menu, got %v", r.state)
+	}
+
+	step(env, r, Buttons{A: true}, 1)
+	step(env, r, Buttons{}, 1)
+	if r.state != stRun {
+		t.Fatalf("expected run after A, got %v", r.state)
+	}
+
+	// Hold the exit chord. It must take 250 ms, i.e. more than 15 frames.
+	step(env, r, Buttons{Start: true, Select: true}, 16)
+	if r.state != stRun {
+		t.Fatalf("exited after only 16 chord frames")
+	}
+	step(env, r, Buttons{Start: true, Select: true}, 1)
+	if r.state != stMenu {
+		t.Fatalf("expected menu after chord, got %v", r.state)
+	}
+}
+
+func TestFreshStartIsDeterministic(t *testing.T) {
+	p := &Platform{frame: make([]uint16, Width*Height)}
+
+	a := NewPlasma()
+	a.Start(p)
+	a.Update(p)
+	first := append([]uint16(nil), p.frame...)
+
+	b := NewPlasma()
+	b.Start(p)
+	b.Update(p)
+	for i := range first {
+		if first[i] != p.frame[i] {
+			t.Fatalf("relaunch differs at pixel %d: %04x vs %04x", i, first[i], p.frame[i])
+		}
+	}
+}
+
+func TestPanicRecoversToMenu(t *testing.T) {
+	r, env, _ := newTestRunner(plasmaLib())
+
+	step(env, r, Buttons{}, 1)
+	step(env, r, Buttons{Down: true}, 1)
+	if r.sel != 1 {
+		t.Fatalf("expected selection 1, got %d", r.sel)
+	}
+
+	step(env, r, Buttons{A: true}, 1)
+	step(env, r, Buttons{}, 1)
+	if r.state != stMenu {
+		t.Fatalf("expected menu after panic, got %v", r.state)
+	}
+	if !strings.Contains(r.crash, "forced panic") {
+		t.Fatalf("expected crash text, got %q", r.crash)
+	}
+}
+
+func TestChordHeldAcrossLaunchDoesNotExit(t *testing.T) {
+	r, env, _ := newTestRunner(plasmaLib())
+
+	step(env, r, Buttons{}, 1)
+
+	// Launch while Start+Select are already held.
+	step(env, r, Buttons{A: true, Start: true, Select: true}, 2)
+
+	// Keep holding: the chord must stay disarmed until released.
+	step(env, r, Buttons{Start: true, Select: true}, 40)
+	if r.state != stRun {
+		t.Fatalf("held chord bounced to menu; state=%v", r.state)
+	}
+
+	// Release (arms), then hold again for 250 ms.
+	step(env, r, Buttons{}, 1)
+	step(env, r, Buttons{Start: true, Select: true}, 17)
+	if r.state != stMenu {
+		t.Fatalf("expected exit after a fresh chord, got %v", r.state)
+	}
+}
+
+func TestMenuSelectsHighlightedCart(t *testing.T) {
+	r, env, _ := newTestRunner(plasmaLib())
+
+	step(env, r, Buttons{Down: true}, 1)
+	step(env, r, Buttons{}, 1)
+	step(env, r, Buttons{A: true}, 1)
+	step(env, r, Buttons{}, 1)
+	// The panic cart panicked, so we are back at the menu with crash text;
+	// had selection stayed on plasma we would still be running.
+	if r.state != stMenu || !strings.Contains(r.crash, "forced panic") {
+		t.Fatalf("expected panic cart launch, state=%v crash=%q", r.state, r.crash)
+	}
+}

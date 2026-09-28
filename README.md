@@ -4,12 +4,10 @@ A minimal TinyGo firmware for the **SYCL Badge V2** — an RP2354B board
 (48-GPIO RP2350B die, 2 MB in-package flash) running the SYCL 2026 production
 (revision 2) hardware.
 
-On boot it draws the **Go gopher** on the 160x128 LCD and holds it there.
-
-> **Status: the display path is not yet confirmed on hardware.** The firmware
-> builds cleanly and the panel init now mirrors the known-good reference
-> firmware, but the gopher has not been re-tested on the panel since the fix.
-> See [Display](#display) below.
+On boot it shows a **cartridge menu** on the 160x128 LCD. Press **A** to launch
+a cartridge — a `PLASMA` effect and a `PANIC TEST` diagnostic — and hold
+**Start+Select** for 250 ms to return to the menu. Cartridges are Go values
+compiled into this one firmware; see [Cartridge runtime](#cartridge-runtime).
 
 > **This is a hobby project.** Code here is largely AI-generated and not
 > guaranteed to be human-reviewed. See [AI_USAGE.md](AI_USAGE.md) before
@@ -20,7 +18,10 @@ On boot it draws the **Go gopher** on the 160x128 LCD and holds it there.
 ```sh
 make build      # -> hello.uf2 + hello.elf
 make flash      # copy hello.uf2 to the badge's BOOTSEL drive
+make flash-swd  # or flash over SWD with a Debug Probe + OpenOCD
 make monitor    # watch the USB-CDC serial output
+make sim        # run the cartridge runtime on the host, render PNG frames
+make test       # host-side unit tests for the cartridge runtime
 ```
 
 ## How it works
@@ -34,12 +35,67 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
 - `targets/board_sycl_badge_v2.go` — board constants, gated on
   `//go:build sycl_badge_v2`. Pin map mirrors the reference firmware's
   `src/board_v2.zig`.
-- `main.go` — the program: initialise the display, draw the gopher, idle.
+- `main.go` — the program: initialise the display and run the cartridge runtime.
 - `display.go` — self-contained ST7735S driver for the badge's panel (SPI0):
-  the panel init sequence and the draw calls.
+  the panel init sequence and the full-frame flush (`lcdPresent`).
+- `hw.go`, `env_hw.go` — adapt the panel and the buttons to the runtime's
+  `Display`/`Env` interfaces.
+- `cartridge/` — the hardware-independent runtime: the `Cartridge` interface,
+  the menu / launch / `recover` loop, and the carts. It imports no hardware, so
+  it is unit-tested and simulated on the host.
+- `cmd/sim` — the host simulator: replays a scripted scenario and writes PNG
+  frames (`make sim`).
 - `gopher_data.go` — generated RGB565 image data (see below).
 - `assets/gopher.png`, `tools/make_gopher.py` — the source image and the
   generator that produced `gopher_data.go`.
+
+## Cartridge runtime
+
+The runtime swaps Go-valued cartridges inside the one firmware. It ports the
+*contract* from the Zig reference firmware, not its loader: there is no UF2
+loader, no second core, and no second TinyGo runtime.
+
+- A cart implements `Start(p *Platform)` (once per launch) and
+  `Update(p *Platform)` (once per frame).
+- The platform owns machine init, the ST7735S driver, button polling, and the
+  same-core SPI flush of a package-level 160x128 RGB565 backbuffer. It presents
+  the frame after every `Update`; present is a function call.
+- Cart state lives on the cart struct and is rebuilt in `Start` — a fresh
+  `Start` on every launch, which replaces the Zig BSS wipe. Carts touch no
+  `machine` state.
+- `Update` runs inside `recover`: a Go `panic` returns to the menu without
+  re-initialising the panel. A hard fault or an infinite loop still takes the
+  chip down; that is accepted.
+- Hold **Start+Select** for 250 ms to exit a cart. The chord is edge-triggered,
+  so a chord held across a launch does not bounce straight back. **A** launches
+  the highlighted cart; joystick up/down moves the selection.
+
+The runtime lives in `cartridge/` and is deliberately hardware-free, so the
+menu, launch/exit, fresh-`Start`, and panic-recovery paths are covered by
+`make test` and rendered by `make sim`:
+
+```sh
+make test   # go test ./cartridge/...
+make sim    # writes sim-out/01-menu.png, 03-plasma-later.png, ...
+```
+
+`make sim` renders the menu, plasma at two points in time, the menu after the
+exit chord, a relaunch that is byte-identical to the first plasma frame (proof
+of a fresh `Start`), and the menu after the panic cart is recovered.
+
+### Hardware self-test
+
+For bring-up without buttons, `-tags=cartdemo` swaps the real button
+environment for a scripted one that replays the simulator's sequence on the
+panel and logs each transition over USB-CDC:
+
+```sh
+tinygo build -target=targets/sycl-badge-v2.json -tags=cartdemo -o demo.elf .
+```
+
+`PANIC TEST` is the phase-1 diagnostic cartridge: it launches, then panics on
+its first `Update`, so the recover path can be exercised on hardware. Phase 2
+replaces it with a second real cart.
 
 ## Display
 
@@ -140,14 +196,16 @@ The volume unmounts and the badge reboots into the new firmware immediately.
 
 ## Verify
 
-The user LED (GPIO14) blinks at 2 Hz, and USB-CDC serial prints one line every
-250 ms:
+On boot the panel shows the cartridge menu, with `PLASMA` highlighted. Press
+**A** to run the plasma effect; hold **Start+Select** (250 ms) to return; press
+**A** again for a fresh start. Push the joystick down to select `PANIC TEST`
+and press **A**: it panics in `Update` and the menu returns with a `PANIC:`
+line, proving the recover path.
 
-```
-hello from SYCL Badge V2 #0
-hello from SYCL Badge V2 #1
-...
-```
+USB-CDC logs each lifecycle transition (`launch: …`, `exit: start+select`,
+`recovered update panic: …`), but only once a serial reader is attached — the
+TinyGo USB-CDC drops writes until the host asserts DTR, so boot prints usually
+appear only if `make monitor` was already running.
 
 On macOS the port looks like `/dev/cu.usbmodem*`. `make monitor` finds it:
 
