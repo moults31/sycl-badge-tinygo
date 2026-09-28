@@ -86,21 +86,23 @@ const (
 	I2C1_SCL_PIN = NoPin
 )
 
-// SPI default pins (SPI0, shared with the LCD).
+// SPI default pins (SPI0, shared with the LCD). The LCD is write-only: GPIO16
+// is the backlight, so SPI0 has no MISO and SDI is NoPin.
 const (
 	SPI0_SCK_PIN = GPIO18
 	SPI0_SDO_PIN = GPIO19
-	SPI0_SDI_PIN = GPIO16
+	SPI0_SDI_PIN = NoPin
 
 	SPI1_SCK_PIN = GPIO10
 	SPI1_SDO_PIN = GPIO11
 	SPI1_SDI_PIN = GPIO12
 )
 
-// UART0 is routed to the debug connector (GPIO0 TX, GPIO1 RX).
+// UART0 is routed to the debug connector (GPIO28 TX, GPIO29 RX), per the
+// reference firmware's board_v2.zig.
 const (
-	UART0_TX_PIN = GPIO0
-	UART0_RX_PIN = GPIO1
+	UART0_TX_PIN = GPIO28
+	UART0_RX_PIN = GPIO29
 	UART1_TX_PIN = GPIO8
 	UART1_RX_PIN = GPIO9
 	UART_TX_PIN  = UART0_TX_PIN

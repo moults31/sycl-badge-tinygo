@@ -6,9 +6,10 @@ A minimal TinyGo firmware for the **SYCL Badge V2** — an RP2354B board
 
 On boot it draws the **Go gopher** on the 160x128 LCD and holds it there.
 
-> **Status: the display path is not yet verified on hardware.** The firmware
-> builds cleanly, but the gopher has not been confirmed on the panel. See
-> [Display (unverified)](#display-unverified) below.
+> **Status: the display path is not yet confirmed on hardware.** The firmware
+> builds cleanly and the panel init now mirrors the known-good reference
+> firmware, but the gopher has not been re-tested on the panel since the fix.
+> See [Display](#display) below.
 
 > **This is a hobby project.** Code here is largely AI-generated and not
 > guaranteed to be human-reviewed. See [AI_USAGE.md](AI_USAGE.md) before
@@ -34,14 +35,16 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
   `//go:build sycl_badge_v2`. Pin map mirrors the reference firmware's
   `src/board_v2.zig`.
 - `main.go` — the program: initialise the display, draw the gopher, idle.
-- `display.go` — ST7735 setup for the badge's panel (SPI0) and the draw call.
+- `display.go` — self-contained ST7735S driver for the badge's panel (SPI0):
+  the panel init sequence and the draw calls.
 - `gopher_data.go` — generated RGB565 image data (see below).
 - `assets/gopher.png`, `tools/make_gopher.py` — the source image and the
   generator that produced `gopher_data.go`.
 
-## Display (unverified)
+## Display
 
-The panel is a 160x128 ST7735S-class display on SPI0, wired as:
+The panel is a **DT018BTFT-SHB**: a 1.8", 160x128, ST7735S-class display on
+SPI0, wired as:
 
 | Signal | GPIO |
 | ------ | ---- |
@@ -51,19 +54,39 @@ The panel is a 160x128 ST7735S-class display on SPI0, wired as:
 | DC     | 21   |
 | BL     | 16   |
 
-`display.go` uses `tinygo.org/x/drivers/st7735`. Two things are worth knowing:
+`display.go` is a small, self-contained ST7735S driver. Its init sequence and
+register values are copied from the badge's reference firmware
+(`src/os/drivers/lcd.zig`, `init_display()`), because this panel needs the
+panel-specific power/gamma settings rather than the generic ST7735 init that
+`tinygo.org/x/drivers/st7735` sends.
 
-- The panel's RESET line is tied to the RP2354B reset, so no reset GPIO is
-  passed to the driver (`machine.NoPin`). This is a likely problem area: the
-  driver calls `Configure()` on every pin it is given.
-- The badge's backlight is a PWM pin (GPIO16); the driver drives it as a plain
-  GPIO.
+The important detail is **orientation**. The panel is natively 128x160; the
+driver addresses it as a 160x128 landscape canvas exactly as the reference does:
 
-**This path has not been confirmed working on hardware.** A bare-GPIO blink
-firmware is verified to run and print over USB-CDC, but the display build was
-never observed drawing. Suspects, in order: `machine.SPI0.Configure` on RP2350,
-the `NoPin` reset argument, or driver/pin setup. See the AI_USAGE note — treat
-this as unvalidated.
+- `MADCTL = 0x60` (`MX | MV`). The `MV` bit exchanges the row/column axes, which
+  makes the column address space 160 wide.
+- Draws then use `CASET = 0..159`, `RASET = 0..127`.
+
+The first version of this driver used `tinygo.org/x/drivers/st7735` at
+rotation 0 (`MADCTL = 0xC0`, no `MV`) while still addressing 160 columns. Without
+`MV` the column (source) axis is only 128 deep, so every 160-pixel-wide write
+overran the display RAM, wrapped, and produced the streaky garbage seen on the
+panel. It also left the driver's `SDI` at its zero value (GPIO0) and relied on
+the generic init.
+
+Other notes:
+
+- The panel's RESET line is tied to the RP2354B reset, so there is no reset GPIO;
+  the driver just waits for the power-on reset to settle.
+- SPI0 is write-only. `SDI` is set to `machine.NoPin` — this both matches the
+  hardware (no MISO) and prevents the SPI peripheral from claiming GPIO0.
+- The backlight is on `BKLT` (GPIO16). It is driven high as a plain GPIO, which
+  the reference uses as full brightness (its PWM `set_level`). The panel's
+  `TFT_LITE` rail is tied to VBUS.
+
+If red and blue come out swapped on hardware, set the `BGR` bit in `MADCTL`
+(i.e. `0x68` instead of `0x60`); the image data is standard RGB565 (high byte
+first), which is what `tools/make_gopher.py` emits.
 
 ### Regenerating the image
 

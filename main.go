@@ -7,9 +7,9 @@ import (
 
 func main() {
 	fmt.Println("boot: initializing display")
-	display := newDisplay()
+	lcdInit()
 	fmt.Println("boot: display configured, drawing gopher")
-	showGopher(display)
+	showGopher()
 	fmt.Println("boot: gopher drawn")
 
 	// The image is now static on the panel. Stay alive so the USB-CDC port
