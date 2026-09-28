@@ -155,28 +155,69 @@ A Raspberry Pi Debug Probe on the badge's SWD port can load over the debug
 interface instead of UF2:
 
 ```sh
-make run-swd     # flash, reset, and run (recommended)
-make flash-swd   # flash only - leaves the core halted
+make flash-swd   # flash, verify, reset, and run over SWD
+make run-swd     # alias for flash-swd (kept for compatibility)
 ```
 
-`make run-swd` holds the terminal open (it streams RTT/log output and must
-stay attached), so run it in its own session; `make monitor` still works in
-another terminal.
+Unlike UF2, no BOOTSEL/RESET button presses are needed. The OpenOCD command is
+self-contained — it flashes, verifies, resets, and releases the core running —
+so the program starts and `make monitor` works immediately afterwards.
 
-**`probe-rs download` writes flash but does not reset the chip.** The core is
-left halted, so the program never starts: no LED, no USB enumeration, and
-nothing for the monitor to read. If you see "no traffic" after flashing over
-SWD, this is why — use `run-swd`.
+### Why OpenOCD and not probe-rs
 
-**Watching serial output.** With the debug probe attached there are two USB
-serial devices: the badge's own USB-CDC (the program's `fmt.Printf` output)
-and the debug probe's UART bridge. `make monitor` selects the badge via
-`-target`; if that ever picks wrong, pass `PORT=/dev/cu.usbmodemXXXX`.
+`flash-swd` drives **OpenOCD**, not probe-rs. probe-rs 0.32 is not usable for
+iteration on this board:
 
-**Probe firmware:** probe-rs 0.32 requires debug-probe firmware ≥ 2.2.0. Older
-probes fail with *"firmware on the probe is outdated"*. Update from
-<https://github.com/raspberrypi/debugprobe/releases>, or just use UF2, which
-needs no extra tooling.
+- `probe-rs download` writes flash but then deliberately **leaves the RP2350
+  core halted**. The program never starts: no LED and no USB enumeration.
+- `probe-rs reset` and even `probe-rs download --reset` do **not** recover it —
+  the reset is a reset-halt and the core is never resumed. Once a halt is left
+  behind, probe-rs's chip auto-detection stops working too (*"The connected
+  chip could not automatically be determined"*).
+- probe-rs's built-in `RP235x` target declares a 64 MiB NVM window, which does
+  not match the badge's 2 MB QSPI flash.
+
+OpenOCD's `program … verify reset exit` does not leave the core halted, and
+identifies the flash correctly:
+
+```
+Info : RP2350 rev 3, QSPI Flash win w25q16jv id = 0x1540ef size = 2048 KiB in 512 sectors
+** Verified OK **
+** Resetting Target **
+```
+
+### Installing OpenOCD
+
+Homebrew's stable `open-ocd` (0.12.0) predates the RP2350 and does not ship
+`target/rp2350.cfg`. Install a build that does:
+
+```sh
+brew install open-ocd --HEAD        # upstream git, which has rp2350.cfg
+```
+
+The Raspberry Pi fork (`raspberrypi/openocd`) works too, as do the OpenOCD
+binaries bundled with the `raspberrypi.pico-vscode` extension.
+
+### Cables and reset
+
+The Debug Probe's 3-pin SWD connector carries only `SWCLK`, `SWDIO`, and `GND`
+— there is **no `nRESET` line**. OpenOCD therefore resets the RP2350 through
+SWD (the chip's ROM/debug reset), so `--connect-under-reset` is neither used
+nor needed. `make flash-swd` also recovers a board whose previous flash left
+the core halted or hard-faulted, with no button presses.
+
+### Watching serial output
+
+With the debug probe attached there are two USB serial devices: the badge's own
+USB-CDC (the program's `fmt.Printf` output) and the debug probe's UART bridge.
+`make monitor` selects the badge via `-target`; if that ever picks wrong, pass
+`PORT=/dev/cu.usbmodemXXXX`.
+
+### Probe firmware
+
+OpenOCD prints the probe firmware as `CMSIS-DAP: FW Version = …` (2.0.0 on the
+probe used here, which works). Update from
+<https://github.com/raspberrypi/debugprobe/releases> if needed.
 
 ## Continuous integration
 

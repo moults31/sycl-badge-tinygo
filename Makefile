@@ -3,11 +3,24 @@ TARGET     := targets/sycl-badge-v2.json
 BOARD_SRC  := targets/board_sycl_badge_v2.go
 BOARD_DST  := $(TINYGOROOT)/src/machine/board_sycl_badge_v2.go
 UF2_VOLUME := /Volumes/RP2350
-PROBE_CHIP := RP235x
+
+# SWD programming uses OpenOCD, not probe-rs.
+#
+# The badge is an RP2350B and the Raspberry Pi Debug Probe speaks CMSIS-DAP, so
+# OpenOCD needs target/rp2350.cfg. That target only exists in OpenOCD git
+# (>= the 0.12.0+dev HEAD) or the Raspberry Pi fork; the 0.12.0 release has
+# only rp2040. See the README for install instructions.
+OPENOCD       ?= openocd
+OCD_INTERFACE ?= interface/cmsis-dap.cfg
+OCD_TARGET    ?= target/rp2350.cfg
+OCD_SPEED     ?= 5000
+
+OCD := $(OPENOCD) -f $(OCD_INTERFACE) -f $(OCD_TARGET) -c "adapter speed $(OCD_SPEED)"
+
 # Override to pick a specific port, e.g. `make monitor PORT=/dev/cu.usbmodem2101`
 PORT       ?=
 
-.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size
+.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd
 
 all: build
 
@@ -36,16 +49,28 @@ flash: build
 	cp hello.uf2 $(UF2_VOLUME)/
 	@echo "flashed; badge should reboot and start printing"
 
-# SWD load via a debug probe (e.g. Raspberry Pi Debug Probe).
-# NOTE: `probe-rs download` writes flash but leaves the core halted, so the
-# program does not start. Use `make run-swd` to flash *and* run.
-flash-swd: build
-	probe-rs download --chip $(PROBE_CHIP) hello.elf
+# SWD load via a Raspberry Pi Debug Probe (CMSIS-DAP) and OpenOCD.
+#
+# `program ... verify reset exit` flashes, verifies, resets, and *runs* the core
+# before OpenOCD exits - it is self-contained and does not leave the core
+# halted. This is the reliable replacement for `probe-rs download`, which left
+# the RP2350 core halted with no way to resume it (see README).
+flash-swd: build check-openocd
+	$(OCD) -c "program hello.elf verify reset exit"
 
-# Flash, reset, and run over SWD. Holds the terminal (RTT/log stream), so run
-# it in its own session; `make monitor` still works in another terminal.
-run-swd: build
-	probe-rs run --chip $(PROBE_CHIP) hello.elf
+# Kept as an alias so existing muscle memory / docs keep working. Previously
+# this was `probe-rs run`, which flashed and reset but then blocked forever
+# waiting for RTT output. The OpenOCD command above flashes and runs without
+# holding the terminal.
+run-swd: flash-swd
+
+check-openocd:
+	@command -v $(OPENOCD) >/dev/null 2>&1 || { \
+		echo "error: $(OPENOCD) not found."; \
+		echo "  install an RP2350-capable OpenOCD, e.g. 'brew install open-ocd --HEAD'"; \
+		echo "  (Homebrew's stable 0.12.0 does not ship target/rp2350.cfg)"; \
+		exit 1; \
+	}
 
 # The badge shares its USB VID:PID (2e8a:000a) with other RP2350 boards, and
 # the debug probe adds a second USB serial port. Pass -target so TinyGo knows
