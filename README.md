@@ -1,10 +1,14 @@
 # sycl-badge-tinygo
 
-A minimal TinyGo "hello world" for the **SYCL Badge V2** — an RP2354B board
+A minimal TinyGo firmware for the **SYCL Badge V2** — an RP2354B board
 (48-GPIO RP2350B die, 2 MB in-package flash) running the SYCL 2026 production
 (revision 2) hardware.
 
-It blinks the board's user LED (GPIO14) and prints a counter over USB-CDC.
+On boot it draws the **Go gopher** on the 160x128 LCD and holds it there.
+
+> **Status: the display path is not yet verified on hardware.** The firmware
+> builds cleanly, but the gopher has not been confirmed on the panel. See
+> [Display (unverified)](#display-unverified) below.
 
 > **This is a hobby project.** Code here is largely AI-generated and not
 > guaranteed to be human-reviewed. See [AI_USAGE.md](AI_USAGE.md) before
@@ -29,7 +33,51 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
 - `targets/board_sycl_badge_v2.go` — board constants, gated on
   `//go:build sycl_badge_v2`. Pin map mirrors the reference firmware's
   `src/board_v2.zig`.
-- `main.go` — the program.
+- `main.go` — the program: initialise the display, draw the gopher, idle.
+- `display.go` — ST7735 setup for the badge's panel (SPI0) and the draw call.
+- `gopher_data.go` — generated RGB565 image data (see below).
+- `assets/gopher.png`, `tools/make_gopher.py` — the source image and the
+  generator that produced `gopher_data.go`.
+
+## Display (unverified)
+
+The panel is a 160x128 ST7735S-class display on SPI0, wired as:
+
+| Signal | GPIO |
+| ------ | ---- |
+| CS     | 17   |
+| SCK    | 18   |
+| MOSI   | 19   |
+| DC     | 21   |
+| BL     | 16   |
+
+`display.go` uses `tinygo.org/x/drivers/st7735`. Two things are worth knowing:
+
+- The panel's RESET line is tied to the RP2354B reset, so no reset GPIO is
+  passed to the driver (`machine.NoPin`). This is a likely problem area: the
+  driver calls `Configure()` on every pin it is given.
+- The badge's backlight is a PWM pin (GPIO16); the driver drives it as a plain
+  GPIO.
+
+**This path has not been confirmed working on hardware.** A bare-GPIO blink
+firmware is verified to run and print over USB-CDC, but the display build was
+never observed drawing. Suspects, in order: `machine.SPI0.Configure` on RP2350,
+the `NoPin` reset argument, or driver/pin setup. See the AI_USAGE note — treat
+this as unvalidated.
+
+### Regenerating the image
+
+```sh
+python3 tools/make_gopher.py assets/gopher.png > gopher_data.go
+```
+
+### Image credit
+
+The Go gopher was designed by **Renée French** and is licensed under the
+**Creative Commons 3.0 Attribution license (CC BY 3.0)**:
+<https://go.dev/wiki/Gopher>. The source PNG is from the Go project's website
+repository. Attribution is carried in the generated `gopher_data.go` header and
+must be preserved.
 
 ### The `$TINYGOROOT` copy step
 
