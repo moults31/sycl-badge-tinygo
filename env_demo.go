@@ -41,10 +41,16 @@ func selectEnv() cartridge.Env {
 			{5100, none},  // plasma runs again
 			{8000, chord}, // exit again
 			{8700, none},
-			{9000, down}, // select the panic cart
+			{9000, down}, // select zeroman
 			{9200, none},
-			{9400, a},    // launch it; Update panics
-			{9600, none}, // recovered back to the menu
+			{9400, a}, // launch; the held A also leaves the title
+			{9600, none},
+			{11200, chord}, // let zeroman play, then exit
+			{11900, none},
+			{12200, down}, // select the panic cart
+			{12400, none},
+			{12600, a},    // launch it; Update panics
+			{12800, none}, // recovered back to the menu
 		},
 	}
 }

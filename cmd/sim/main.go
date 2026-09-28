@@ -48,6 +48,7 @@ func main() {
 
 	lib := []cartridge.Factory{
 		{Name: "PLASMA", New: cartridge.NewPlasma},
+		{Name: "ZEROMAN", New: cartridge.NewZeroman},
 		{Name: "PANIC TEST", New: cartridge.NewPanicTest},
 	}
 
@@ -100,12 +101,26 @@ func main() {
 	step(chord, 20)
 	step(none, 2)
 
+	// Select and launch zeroman: title screen, then let the game start.
+	step(down, 1)
+	step(a, 1)
+	step(none, 1)
+	dump("06-zeroman-title.png")
+	step(a, 1)     // any key leaves the title
+	step(none, 90) // title counter -> start
+	step(none, 60) // start -> playing
+	dump("07-zeroman-playing.png")
+	step(none, 30)
+	dump("08-zeroman-playing-later.png")
+	step(chord, 20)
+	step(none, 2)
+
 	// Select and launch the panic cart; the runtime must recover to the menu.
 	step(down, 1)
-	dump("06-menu-panic-selected.png")
+	dump("09-menu-panic-selected.png")
 	step(a, 1)
 	step(none, 2)
-	dump("07-menu-after-panic.png")
+	dump("10-menu-after-panic.png")
 
 	fmt.Printf("wrote frames to %s/\n", *out)
 }

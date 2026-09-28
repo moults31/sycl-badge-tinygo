@@ -13,6 +13,7 @@ func main() {
 
 	lib := []cartridge.Factory{
 		{Name: "PLASMA", New: cartridge.NewPlasma},
+		{Name: "ZEROMAN", New: cartridge.NewZeroman},
 		{Name: "PANIC TEST", New: cartridge.NewPanicTest},
 	}
 	runner := cartridge.NewRunner(selectEnv(), lcdDisplay{}, lib)

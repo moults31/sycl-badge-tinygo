@@ -5,9 +5,10 @@ A minimal TinyGo firmware for the **SYCL Badge V2** — an RP2354B board
 (revision 2) hardware.
 
 On boot it shows a **cartridge menu** on the 160x128 LCD. Press **A** to launch
-a cartridge — a `PLASMA` effect and a `PANIC TEST` diagnostic — and hold
-**Start+Select** for 250 ms to return to the menu. Cartridges are Go values
-compiled into this one firmware; see [Cartridge runtime](#cartridge-runtime).
+a cartridge — a `PLASMA` effect, a `ZEROMAN` platformer, and a `PANIC TEST`
+diagnostic — and hold **Start+Select** for 250 ms to return to the menu.
+Cartridges are Go values compiled into this one firmware; see
+[Cartridge runtime](#cartridge-runtime).
 
 > **This is a hobby project.** Code here is largely AI-generated and not
 > guaranteed to be human-reviewed. See [AI_USAGE.md](AI_USAGE.md) before
@@ -43,8 +44,15 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
 - `cartridge/` — the hardware-independent runtime: the `Cartridge` interface,
   the menu / launch / `recover` loop, and the carts. It imports no hardware, so
   it is unit-tested and simulated on the host.
+  - `plasma.go` — the plasma effect.
+  - `zeroman*.go` — the platformer port (types, player, enemies, effects, the
+    game loop) plus generated `zeroman_gfx.go` and `zeroman_stage.go`.
+  - `panictest.go` — the phase-1 recover diagnostic.
 - `cmd/sim` — the host simulator: replays a scripted scenario and writes PNG
   frames (`make sim`).
+- `tools/make_zeroman_gfx.py`, `tools/make_zeroman_stage.py` — generate the
+  zeroman art (RGB565 palettes + packed indices) and stage data from the
+  reference cart.
 - `gopher_data.go` — generated RGB565 image data (see below).
 - `assets/gopher.png`, `tools/make_gopher.py` — the source image and the
   generator that produced `gopher_data.go`.
@@ -81,7 +89,19 @@ make sim    # writes sim-out/01-menu.png, 03-plasma-later.png, ...
 
 `make sim` renders the menu, plasma at two points in time, the menu after the
 exit chord, a relaunch that is byte-identical to the first plasma frame (proof
-of a fresh `Start`), and the menu after the panic cart is recovered.
+of a fresh `Start`), the zeroman title and playfield, and the menu after the
+panic cart is recovered.
+
+### Zeroman
+
+`zeroman*.go` is a port of `showcase/carts/zeroman` at 160x128. The reference's
+package-level state (`GameData`, the player, enemies, room transition, text
+layer, RNG) lives on the cart struct and is rebuilt in `Start`. Tiles and
+sprites are generated RGB565 with packed palette indices, and the stage is
+parsed from the reference's `needleman.zig`, both through `go generate`-style
+tools (`tools/make_zeroman_gfx.py`, `tools/make_zeroman_stage.py`). The
+reference's Tracy zones are dropped. Input is the platform's button snapshot;
+the cart does not touch timers, SPI or `machine`.
 
 ### Hardware self-test
 
@@ -93,9 +113,8 @@ panel and logs each transition over USB-CDC:
 tinygo build -target=targets/sycl-badge-v2.json -tags=cartdemo -o demo.elf .
 ```
 
-`PANIC TEST` is the phase-1 diagnostic cartridge: it launches, then panics on
-its first `Update`, so the recover path can be exercised on hardware. Phase 2
-replaces it with a second real cart.
+`PANIC TEST` remains as a diagnostic cartridge: it launches, then panics on its
+first `Update`, so the recover path can still be exercised on hardware.
 
 ## Display
 
@@ -198,9 +217,11 @@ The volume unmounts and the badge reboots into the new firmware immediately.
 
 On boot the panel shows the cartridge menu, with `PLASMA` highlighted. Press
 **A** to run the plasma effect; hold **Start+Select** (250 ms) to return; press
-**A** again for a fresh start. Push the joystick down to select `PANIC TEST`
-and press **A**: it panics in `Update` and the menu returns with a `PANIC:`
-line, proving the recover path.
+**A** again for a fresh start. Push the joystick down to select `ZEROMAN` and
+press **A**: press a direction or **A** to leave the title, then move with the
+joystick and jump (**A**) / shoot (**B**). Push down to `PANIC TEST` and press
+**A**: it panics in `Update` and the menu returns with a `PANIC:` line, proving
+the recover path.
 
 USB-CDC logs each lifecycle transition (`launch: …`, `exit: start+select`,
 `recovered update panic: …`), but only once a serial reader is attached — the
