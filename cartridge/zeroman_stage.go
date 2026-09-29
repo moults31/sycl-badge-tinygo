@@ -192,8 +192,8 @@ var zeromanStage = stage{
 			entities: []entity{
 				{class: classSpike, box: box{x: 464, y: 168, w: 16, h: 24}},
 				{class: classPlayer, box: box{x: 124, y: 168, w: 16, h: 24}},
-				{class: classGopher, box: box{x: 372, y: 120, w: 16, h: 24}},
-				{class: classGopher, box: box{x: 580, y: 120, w: 16, h: 24}},
+				{class: classIguana, box: box{x: 372, y: 120, w: 16, h: 24}},
+				{class: classIguana, box: box{x: 580, y: 120, w: 16, h: 24}},
 			},
 		},
 		{

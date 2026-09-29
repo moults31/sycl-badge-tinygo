@@ -80,7 +80,7 @@ type entityClass uint8
 
 const (
 	classPlayer entityClass = iota
-	classGopher
+	classIguana
 	classSpike
 )
 

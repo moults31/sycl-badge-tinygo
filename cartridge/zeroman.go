@@ -52,14 +52,6 @@ func subSat(a, b uint8) uint8 {
 	return a - b
 }
 
-func modFloor(a, b int) int {
-	m := a % b
-	if m != 0 && m < 0 {
-		m += b
-	}
-	return m
-}
-
 type zeroman struct {
 	p     *Platform
 	frame []uint16
@@ -82,6 +74,8 @@ type zeroman struct {
 
 	transition zTransition
 	modeFrame  int
+	transY0    int
+	transY1    int
 
 	text       [textW * textH]byte
 	deathFrame uint32
@@ -151,8 +145,8 @@ func (z *zeroman) reset() {
 func (z *zeroman) activateEnemies(room *room) {
 	i := 0
 	for _, e := range room.entities {
-		if e.class == classGopher && i < len(z.enemies) {
-			z.enemies[i].activate(enemyGopher, e.box)
+		if e.class == classIguana && i < len(z.enemies) {
+			z.enemies[i].activate(enemyIguana, e.box)
 			i++
 		}
 	}
@@ -350,6 +344,7 @@ func (z *zeroman) tickPlaying() {
 		z.setNextRoom(next)
 		z.transition = trVertical
 		z.modeFrame = 0
+		z.beginVerticalTransition()
 	}
 
 	room := &zeromanStage.rooms[z.curRoom]
@@ -420,6 +415,41 @@ func (z *zeroman) updatePlayer() {
 	if z.scrollr.x > room.bounds.x+room.bounds.w-Width {
 		z.scrollr.x = room.bounds.x + room.bounds.w - Width
 	}
+	z.followPlayerY(room)
+}
+
+// followPlayerY keeps the player vertically centred, clamped to the room. The
+// reference cart never scrolls vertically, but its rooms are 240px tall on a
+// 128px screen, so without this the player leaves the view on ladders and falls.
+func (z *zeroman) followPlayerY(room *room) {
+	targetY := z.player.box.y + z.player.box.h/2 - Height/2
+	if targetY < room.bounds.y {
+		targetY = room.bounds.y
+	}
+	if maxY := room.bounds.y + room.bounds.h - Height; targetY > maxY {
+		targetY = maxY
+	}
+	z.scrollr.y = targetY
+}
+
+// beginVerticalTransition records the scroll's start and end Y for a room-to-room
+// vertical move, so the camera slides smoothly instead of jumping to the new room.
+func (z *zeroman) beginVerticalTransition() {
+	cur := &zeromanStage.rooms[z.curRoom]
+	prev := &zeromanStage.rooms[z.prevRoom]
+	z.transY0 = z.scrollr.y
+	finalY := prev.bounds.y - z.player.box.h
+	if cur.bounds.y >= prev.bounds.y+prev.bounds.h {
+		finalY = cur.bounds.y
+	}
+	targetY := finalY + z.player.box.h/2 - Height/2
+	if targetY < cur.bounds.y {
+		targetY = cur.bounds.y
+	}
+	if maxY := cur.bounds.y + cur.bounds.h - Height; targetY > maxY {
+		targetY = maxY
+	}
+	z.transY1 = targetY
 }
 
 func (z *zeroman) findNextRoom(skip int, b box) (int, bool) {
@@ -444,13 +474,12 @@ func (z *zeroman) doVerticalRoomTransition() {
 	cur := &zeromanStage.rooms[z.curRoom]
 	prev := &zeromanStage.rooms[z.prevRoom]
 	if cur.bounds.y >= prev.bounds.y+prev.bounds.h {
-		z.scrollr.y = prev.bounds.y + (z.modeFrame*Height)/60
 		z.player.box.y = cur.bounds.y - z.player.box.h + (z.modeFrame*z.player.box.h)/60
 	}
 	if cur.bounds.y+cur.bounds.h <= prev.bounds.y {
-		z.scrollr.y = prev.bounds.y - (z.modeFrame*Height)/60
 		z.player.box.y = prev.bounds.y - (z.modeFrame*z.player.box.h)/60
 	}
+	z.scrollr.y = z.transY0 + ((z.transY1-z.transY0)*z.modeFrame)/60
 	if z.modeFrame == 60 {
 		z.transition = trNone
 	}

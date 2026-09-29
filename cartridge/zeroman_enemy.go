@@ -1,11 +1,11 @@
 package cartridge
 
-// Ported from showcase/carts/zeroman/src/Enemy.zig. Only the gopher exists in
-// the needleman stage.
+// Ported from showcase/carts/zeroman/src/Enemy.zig. The player is now the
+// gopher, so every enemy is an iguana, drawn from the zero sprite sheet.
 
 type enemyType uint8
 
-const enemyGopher enemyType = 0
+const enemyIguana enemyType = 0
 
 type enemy struct {
 	active        bool
@@ -46,8 +46,8 @@ func (e *enemy) tick(z *zeroman, attribs []tileAttrib) {
 		return
 	}
 	switch e.typ {
-	case enemyGopher:
-		e.tickGopher(z, attribs)
+	case enemyIguana:
+		e.tickIguana(z, attribs)
 	}
 }
 
@@ -61,12 +61,12 @@ func (e *enemy) hurt(damage uint8) {
 
 func (e *enemy) draw(z *zeroman) {
 	switch e.typ {
-	case enemyGopher:
-		e.drawGopher(z)
+	case enemyIguana:
+		e.drawIguana(z)
 	}
 }
 
-func (e *enemy) tickGopher(z *zeroman, attribs []tileAttrib) {
+func (e *enemy) tickIguana(z *zeroman, attribs []tileAttrib) {
 	room := &zeromanStage.rooms[z.curRoom]
 	switch e.state {
 	case 0: // idle
@@ -107,7 +107,7 @@ func (e *enemy) tickGopher(z *zeroman, attribs []tileAttrib) {
 	}
 }
 
-func (e *enemy) drawGopher(z *zeroman) {
+func (e *enemy) drawIguana(z *zeroman) {
 	if e.health == 0 {
 		drawDeathEffectSmall(z, e.box.x+e.box.w/2, e.box.y+e.box.h/2, e.deathFrames)
 		return
@@ -116,5 +116,14 @@ func (e *enemy) drawGopher(z *zeroman) {
 		z.drawSprite(&gfxHurt, 0, 0, gfxHurt.w, gfxHurt.h, false, e.box.x-4, e.box.y)
 		return
 	}
-	z.drawSprite(&gfxGopher, int(e.frame)*24, 0, 24, 24, e.faceLeft, e.box.x-4, e.box.y)
+
+	// The zero sheet's idle pose is 24 wide; the running poses are 32.
+	sx, sw := 0, 24
+	if e.state == 1 {
+		sx, sw = 48+int(e.frame-1)*32, 32
+	}
+	const spriteH = 32
+	dx := e.box.x + (e.box.w-sw)/2
+	dy := e.box.y + e.box.h - spriteH
+	z.drawSprite(&gfxZero, sx, 0, sw, spriteH, e.faceLeft, dx, dy)
 }

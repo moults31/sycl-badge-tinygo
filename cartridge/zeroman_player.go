@@ -81,73 +81,22 @@ func (pl *player) draw(z *zeroman) {
 		return
 	}
 
-	sx, sy, sw, sh := 0, 0, 24, 32
-	shooting := pl.shootFrames > 0
-	flipX := pl.faceLeft
-	switch pl.state {
-	case psIdle:
-		if !shooting {
-			if pl.animTime > 200 {
-				sx = 24
-			}
-			if pl.animTime > 210 {
-				pl.animTime = 0
-			}
-		}
-	case psSliding:
-		sx, sy, sw, sh = 144, 6, 32, 26
-	case psRunning:
-		frame := int(pl.animTime%40) / 10
-		switch frame {
-		case 1, 3:
+	// The player is the gopher now: a single 24x24 sheet with two front-facing
+	// poses (1, 2) and a back view (0). Idle and the states without dedicated
+	// art use pose 1 so the face is visible; running alternates 1 and 2.
+	frame := 1
+	if pl.state == psRunning {
+		if pl.animTime%20 < 10 {
 			frame = 1
-		case 2:
+		} else {
 			frame = 2
 		}
-		sw = 32
-		sx = 48 + frame*sw
-	case psJumping:
-		sx, sy, sw, sh = 176, 0, 32, 32
-	case psClimbing:
-		if shooting {
-			sx, sy, sw, sh = 208, 0, 24, 32
-		} else {
-			sx, sy, sw, sh = 240, 0, 16, 32
-			flipX = modFloor(pl.box.y, 20) < 10
-		}
-	case psHurting:
-		sx, sy, sw, sh = 208, 0, 32, 32
 	}
-	if shooting {
-		sy += 32
-		sw = 32
-	}
-	dx := pl.box.x + (pl.box.w-sw)/2
-	dy := pl.box.y - 8
-	if shooting {
-		if pl.state == psIdle {
-			if flipX {
-				dx -= 4
-			} else {
-				dx += 4
-			}
-		} else if pl.state == psClimbing {
-			if flipX {
-				dx -= 8
-			} else {
-				dx += 8
-			}
-		}
-	}
-	switch pl.state {
-	case psClimbing:
-		dy += 4
-	case psJumping:
-		dy += 5
-	case psHurting:
-		dy += 6
-	}
-	z.drawSprite(&gfxZero, sx, sy, sw, sh, flipX, dx, dy)
+	const gopherSize = 24
+	sx := frame * gopherSize
+	dx := pl.box.x + (pl.box.w-gopherSize)/2
+	dy := pl.box.y + pl.box.h - gopherSize
+	z.drawSprite(&gfxGopher, sx, 0, gopherSize, gopherSize, pl.faceLeft, dx, dy)
 
 	for i := range pl.shots {
 		if pl.shots[i].active {

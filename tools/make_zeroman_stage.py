@@ -15,6 +15,11 @@ import re
 import sys
 from pathlib import Path
 
+# The reference stage marks enemy spawns with `.gopher`; in this port the
+# player is the gopher and the enemies are the iguanas (see zeroman_enemy.go),
+# so map that class to its Go name.
+CLASS_NAMES = {"gopher": "Iguana"}
+
 
 def match_brace(s: str, open_idx: int) -> int:
     depth = 0
@@ -117,7 +122,7 @@ def main() -> int:
             out.write("\t\t\tentities: []entity{\n")
             for cls, ex, ey, ew, eh in r["entities"]:
                 out.write(
-                    f"\t\t\t\t{{class: class{cls.capitalize()}, "
+                    f"\t\t\t\t{{class: class{CLASS_NAMES.get(cls, cls.capitalize())}, "
                     f"box: box{{x: {ex}, y: {ey}, w: {ew}, h: {eh}}}}},\n"
                 )
             out.write("\t\t\t},\n")
