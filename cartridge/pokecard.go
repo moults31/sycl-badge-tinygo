@@ -45,6 +45,13 @@ type CardShow struct {
 	card CardAsset
 	cal  *cardCalib
 
+	// library is an optional runtime-supplied card set (used by the host
+	// simulator, which loads cards from the user's local folder at startup).
+	// When empty, Start falls back to the baked `cards` the firmware ships.
+	library []CardAsset
+	// list is the set resolved for this launch: library if set, else cards.
+	list []CardAsset
+
 	sin  [256]uint8 // sin, biased to 0..255
 	ramp [256]uint16
 
@@ -69,8 +76,14 @@ const (
 	cardSpkCount    = 8
 )
 
-// NewCardShow returns the card lightshow cartridge.
+// NewCardShow returns the card lightshow cartridge using the baked library.
 func NewCardShow() Cartridge { return &CardShow{} }
+
+// NewCardShowWith returns the card lightshow cartridge driven by an explicit
+// card library instead of the baked one. The host simulator uses it to render
+// the cards found in the user's local folder; the firmware always uses
+// NewCardShow and the baked cards.
+func NewCardShowWith(library []CardAsset) Cartridge { return &CardShow{library: library} }
 
 // Name implements Cartridge.
 func (c *CardShow) Name() string { return "CARD SHOW" }
@@ -80,17 +93,24 @@ func (c *CardShow) Start(p *Platform) {
 	c.t, c.flash = 0, 0
 	c.idx = 0
 	c.calib = false
-	c.cals = make([]cardCalib, len(cards))
+
+	c.list = c.library
+	if len(c.list) == 0 {
+		c.list = cards
+	}
+	c.cals = make([]cardCalib, len(c.list))
 
 	for i := 0; i < 256; i++ {
 		c.sin[i] = uint8((math.Sin(float64(i)*2*math.Pi/256) + 1) * 127.5)
 	}
-	c.loadCard()
+	if len(c.list) > 0 {
+		c.loadCard()
+	}
 }
 
 // loadCard (re)builds the per-card ramp and sparkle field for cards[idx].
 func (c *CardShow) loadCard() {
-	c.card = cards[c.idx]
+	c.card = c.list[c.idx]
 	c.cal = &c.cals[c.idx]
 	c.buildRamp()
 
@@ -172,13 +192,13 @@ func (c *CardShow) Update(p *Platform) {
 		c.cal.offY = clampInt(c.cal.offY, -48, 48)
 		c.cal.rot = clampInt(c.cal.rot, -8, 8)
 	} else {
-		// Cycle the baked library.
+		// Cycle the loaded library.
 		prev := c.idx
-		if pressed(p.buttons.Left, p.prev.Left) && len(cards) > 0 {
-			c.idx = (c.idx - 1 + len(cards)) % len(cards)
+		if pressed(p.buttons.Left, p.prev.Left) && len(c.list) > 0 {
+			c.idx = (c.idx - 1 + len(c.list)) % len(c.list)
 		}
-		if pressed(p.buttons.Right, p.prev.Right) && len(cards) > 0 {
-			c.idx = (c.idx + 1) % len(cards)
+		if pressed(p.buttons.Right, p.prev.Right) && len(c.list) > 0 {
+			c.idx = (c.idx + 1) % len(c.list)
 		}
 		if c.idx != prev {
 			c.flash = 0
@@ -198,6 +218,9 @@ func (c *CardShow) render(p *Platform) {
 	fb := p.Frame()
 	for i := range fb {
 		fb[i] = 0
+	}
+	if len(c.list) == 0 {
+		return
 	}
 
 	// Breathing envelope 0..255, ~3 s at 60 fps.

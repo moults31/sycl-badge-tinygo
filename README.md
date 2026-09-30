@@ -22,6 +22,7 @@ make flash      # copy hello.uf2 to the badge's BOOTSEL drive
 make flash-swd  # or flash over SWD with a Debug Probe + OpenOCD
 make monitor    # watch the USB-CDC serial output
 make sim        # run the cartridge runtime on the host, render PNG frames
+make sim-ui     # run it interactively in a browser window (keyboard + buttons)
 make test       # host-side unit tests for the cartridge runtime
 ```
 
@@ -53,8 +54,14 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
   - `panictest.go` — the phase-1 recover diagnostic.
 - `cmd/sim` — the host simulator: replays a scripted scenario and writes PNG
   frames (`make sim`).
+- `cmd/simui` — the interactive simulator: runs the same runtime live and serves
+  the panel and controls to a browser window, driven by keyboard or on-screen
+  buttons (`make sim-ui`). It loads the user's real cards from the shared card
+  library at startup.
 - `tools/make_card.py` — generates the baked card lightshow asset from a card's
   art box (or an original synthetic sample).
+- `tools/cards_dir.sh` — prints the shared card library every worktree resolves
+  to (see [One card library across worktrees](#one-card-library-across-worktrees)).
 - `tools/make_zeroman_gfx.py`, `tools/make_zeroman_stage.py` — generate the
   zeroman art (RGB565 palettes + packed indices) and stage data from the
   reference cart.
@@ -98,6 +105,69 @@ of a fresh `Start`), the zeroman title and playfield, the menu after the
 panic cart is recovered, and the card lightshow — one frame per baked card,
 then a breathing frame, an attack flash, and the calibration overlay.
 
+### Interactive simulator
+
+`make sim-ui` runs the runtime live instead of scripted: it starts a small HTTP
+server on `127.0.0.1`, opens a browser window, and drives the very same
+`cartridge.Runner` the badge runs, at the same ~60 fps pace. The window shows
+the 160x128 panel at an integer zoom and posts the state of its keyboard and
+on-screen controls back as the runner's `Env`, so the menu, the launch/exit
+chords, panic recovery, and every cart behave exactly as they do on hardware —
+only the panel and the pins are replaced.
+
+- **Keyboard (preferred):** arrows or WASD move the joystick, **Z**/**J** is A,
+  **X**/**K** is B, **Enter** is Start, **Shift** is Select, **C** is the stick
+  click, **Esc** releases everything. Hold **Start+Select** for 250 ms to leave
+  a cart.
+- **On-screen buttons:** the same controls, pressed for as long as the pointer
+  is held, for touch or when a keyboard is not to hand.
+- The green dot shows the live frame stream; the backlight percentage follows
+  the carts that dim or pulse the panel (e.g. the card lightshow).
+
+The sim shows your **real cards** without a rebuild. At startup it runs the very
+same `tools/make_card.py` the firmware build uses, on the shared card library
+(see [One card library across worktrees](#one-card-library-across-worktrees)),
+and loads the assets it emits — so dropping a card in and relaunching the sim is
+enough. The banner reports which set was loaded; with no manifest (or no
+Python/Pillow) it falls back to the cards already baked into the binary. The
+firmware still bakes its cards at build time through `make build`/`card-data`, so
+both use one generator.
+
+Extra flags pass through, e.g.
+`make sim-ui SIMUI_FLAGS="-addr 127.0.0.1:8423 -open=false"` or
+`make sim-ui SIMUI_CARDS=~/my-cards`, or run the command directly with
+`go run ./cmd/simui`. Like `make sim`, it needs the generated card data, which
+`make sim-ui` builds first.
+
+### One card library across worktrees
+
+Card imagery is gitignored, so a git worktree never owns a copy: images dropped
+into one worktree are invisible to the others and are lost when that worktree is
+removed. To avoid that, both `make` and `cmd/simui` resolve **one** shared card
+library, in this order:
+
+1. `$SYCL_CARDS_DIR`, if set — point it anywhere (a backup, a NAS, a shared
+   folder);
+2. the **main worktree's** `assets/cards` — git's common dir lives in the main
+   checkout, so every linked worktree shares that one library;
+3. `./assets/cards` in the current worktree (legacy / standalone clone).
+
+So the rule of thumb is: **put card images and `manifest.json` in the main
+checkout's `assets/cards/`**, and every worktree — plus the firmware built from
+any of them — sees them. `tools/cards_dir.sh` prints the resolved directory;
+`make cards-dir` shows it, and `make cards-link` symlinks the current worktree's
+`assets/cards` to it for tools that expect the documented path.
+
+```sh
+make cards-dir                  # where the shared library resolves to
+cp ~/Downloads/my-card.webp "$(make -s cards-dir)/"   # add a card
+# ... add an entry to "$(make -s cards-dir)/manifest.json", then:
+make sim-ui                     # picks it up on relaunch
+```
+
+`SYCL_CARDS_DIR=/path/to/cards make sim-ui` (or `make build`) uses an alternate
+library without moving anything into the repo.
+
 ### Card shinethrough lightshow
 
 `CARD SHOW` (`cartridge/pokecard.go`) backlights a physical card laid on the
@@ -113,11 +183,14 @@ stretched across the panel and bilinearly upscaled). Assets are **generated at
 build time and gitignored** — no card imagery and no derived mask is committed.
 `make build`/`size`/`test`/`sim` run `tools/make_card.py`:
 
-- if `assets/cards/manifest.json` exists, it bakes one `CardAsset` per entry;
+- if the shared library's `manifest.json` exists, it bakes one `CardAsset` per
+  entry (the shared library is the main worktree's `assets/cards/`, or
+  `$SYCL_CARDS_DIR`; see
+  [One card library across worktrees](#one-card-library-across-worktrees));
 - otherwise it emits a single **original synthetic sample**, so a fresh clone
   and CI still compile (CI installs Pillow for this).
 
-Source images live under the gitignored `assets/cards/`. A manifest entry:
+Source images live under the gitignored shared library. A manifest entry:
 
 ```json
 {"file": "charizard.webp", "name": "CHARIZARD", "set": "CLASSIC",

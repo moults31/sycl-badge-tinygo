@@ -21,13 +21,20 @@ OCD := $(OPENOCD) -f $(OCD_INTERFACE) -f $(OCD_TARGET) -c "adapter speed $(OCD_S
 PORT       ?=
 
 # Baked card lightshow assets. The source card images (assets/cards/) and the
-# generated Go are both gitignored, so this is rebuilt on every build. With no
+# generated Go are both gitignored, so this is rebuilt on every build. Because
+# imagery is gitignored, a worktree never owns a copy: tools/cards_dir.sh
+# resolves ONE shared library for every worktree -- $SYCL_CARDS_DIR if set,
+# else the main worktree's assets/cards, else ./assets/cards. With no
 # manifest/sources present (e.g. a fresh clone or CI) it falls back to the
 # original synthetic sample, so the firmware still compiles.
-CARD_MANIFEST ?= assets/cards/manifest.json
+CARDS_DIR     := $(strip $(shell sh tools/cards_dir.sh 2>/dev/null))
+ifeq ($(CARDS_DIR),)
+CARDS_DIR     := assets/cards
+endif
+CARD_MANIFEST ?= $(CARDS_DIR)/manifest.json
 CARD_OUT      ?= cartridge/cards_data.go
 
-.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim test card-data card-sample
+.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim sim-ui test card-data card-sample cards-dir cards-link
 
 all: build
 
@@ -62,6 +69,35 @@ size: install-board card-data
 SIM_OUT ?= sim-out
 sim: card-data
 	go run ./cmd/sim -out $(SIM_OUT)
+
+# Host-side interactive sim: runs the same runtime at ~60 fps and serves the
+# panel and controls to a browser window, so carts can be driven by hand with a
+# keyboard or the on-screen buttons (no hardware). The sim loads cards from
+# SIMUI_CARDS at startup using the same generator as the firmware build, so
+# local card edits show up on relaunch without a rebuild; set SIMUI_CARDS= to
+# force the baked cards. Extra flags via SIMUI_FLAGS, e.g.
+# `make sim-ui SIMUI_FLAGS="-addr 127.0.0.1:8423 -open=false"`.
+SIMUI_CARDS ?= $(CARDS_DIR)
+SIMUI_FLAGS ?=
+sim-ui: card-data
+	go run ./cmd/simui -cards "$(SIMUI_CARDS)" $(SIMUI_FLAGS)
+
+# Print the shared card directory all worktrees resolve to (see cards_dir.sh).
+cards-dir:
+	@echo "$(CARDS_DIR)"
+
+# Link this worktree's assets/cards to the shared library, for tools that expect
+# the documented path (the Makefile and cmd/simui resolve it directly anyway).
+cards-link:
+	@if [ "$(CARDS_DIR)" = "assets/cards" ]; then \
+		echo "cards-link: already local ($(CARDS_DIR))"; exit 0; \
+	fi; \
+	if [ -e assets/cards ] || [ -L assets/cards ]; then \
+		echo "cards-link: assets/cards already exists"; exit 1; \
+	fi; \
+	mkdir -p assets; \
+	ln -s "$(abspath $(CARDS_DIR))" assets/cards; \
+	echo "linked assets/cards -> $(abspath $(CARDS_DIR))"
 
 # Host-side unit tests for the cartridge runtime.
 test: card-data

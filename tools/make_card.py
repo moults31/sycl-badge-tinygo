@@ -32,13 +32,16 @@ Glow modes (per card)
 
 Output
 ------
-A Go source file (package ``cartridge``) defining ``var cards = []CardAsset{...}``.
-The generated file is gitignored and rebuilt by ``make`` (see the Makefile).
+A Go source file (package ``cartridge``) defining ``var cards = []CardAsset{...}``
+(the default), or, with ``--format json``, the same assets as JSON for the host
+simulator (``cmd/simui``) to load at runtime. The generated Go file is gitignored
+and rebuilt by ``make`` (see the Makefile).
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -352,6 +355,31 @@ var cards = []CardAsset{{
 """
 
 
+def render_json(assets: list[Asset]) -> str:
+    """The same assets as render_go, as JSON for the host sim.
+
+    ``cmd/simui`` loads this at runtime so the interactive sim shows exactly the
+    cards the firmware bakes, without a rebuild. The mask travels as base64 of
+    the same packed 4-bit bytes; the palette as RGB triples.
+    """
+    doc = {
+        "cards": [
+            {
+                "name": a.name,
+                "set": a.set_,
+                "types": a.types,
+                "rarity": a.rarity,
+                "mask_w": a.width,
+                "mask_h": a.height,
+                "mask_b64": base64.b64encode(a.mask).decode("ascii"),
+                "palette": [[r, g, b] for (r, g, b) in a.palette],
+            }
+            for a in assets
+        ]
+    }
+    return json.dumps(doc, indent=2) + "\n"
+
+
 def preview(a: Asset, path: str, w: int = 160, h: int = 128) -> None:
     """Write an upscaled, palette-colored view of the mask (sim-scale)."""
     img = Image.new("RGB", (w, h), (0, 0, 0))
@@ -433,7 +461,10 @@ def main() -> int:
     ap.add_argument("--rarity", default="COMMON")
     ap.add_argument("--preview", help="write an upscaled PNG preview (single card)")
     ap.add_argument("--preview-dir", help="write one preview PNG per card (manifest)")
-    ap.add_argument("-o", "--out", default="-", help="output Go file, or - for stdout")
+    ap.add_argument("--format", choices=("go", "json"), default="go",
+                    help="output format: Go source for the firmware (default) or "
+                         "JSON for the host simulator")
+    ap.add_argument("-o", "--out", default="-", help="output file, or - for stdout")
     args = ap.parse_args()
 
     assets: list[Asset] = []
@@ -482,7 +513,7 @@ def main() -> int:
         for a in assets:
             preview(a, os.path.join(args.preview_dir, slug(a.name or "card") + ".png"))
 
-    out = gofmt(render_go(assets))
+    out = render_json(assets) if args.format == "json" else gofmt(render_go(assets))
     if args.out == "-":
         sys.stdout.write(out)
     else:

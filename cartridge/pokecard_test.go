@@ -104,3 +104,88 @@ func TestCardShowDrivesBacklight(t *testing.T) {
 		t.Fatalf("attack backlight = %d, want 255", disp.backlight)
 	}
 }
+
+// testCard builds a tiny valid 2x2 CardAsset.
+func testCard(name string, mask []byte) CardAsset {
+	return CardAsset{
+		Name:    name,
+		Set:     "TEST",
+		Types:   []string{"Fire"},
+		MaskW:   2,
+		MaskH:   2,
+		Mask:    mask,
+		Palette: []uint16{RGB565(0, 0, 0), RGB565(255, 80, 0), RGB565(255, 255, 255)},
+	}
+}
+
+// TestCardShowUsesInjectedLibrary proves the host sim can drive the cart with
+// cards loaded at runtime instead of the baked set.
+func TestCardShowUsesInjectedLibrary(t *testing.T) {
+	p := newCardPlatform()
+	injected := []CardAsset{testCard("INJECTED", []byte{0xF0, 0xFF})}
+
+	c := NewCardShowWith(injected).(*CardShow)
+	c.Start(p)
+	if len(c.list) != 1 || c.card.Name != "INJECTED" {
+		t.Fatalf("injected library not used: list=%d card=%q", len(c.list), c.card.Name)
+	}
+
+	c.Update(p)
+	lit := 0
+	for _, v := range p.frame {
+		if v != 0 {
+			lit++
+		}
+	}
+	if lit == 0 {
+		t.Fatal("injected card produced no glow")
+	}
+}
+
+// TestCardShowWithNilFallsBackToBaked keeps the firmware path: an empty library
+// must fall back to the baked cards.
+func TestCardShowWithNilFallsBackToBaked(t *testing.T) {
+	p := newCardPlatform()
+	c := NewCardShowWith(nil).(*CardShow)
+	c.Start(p)
+	if len(c.list) == 0 {
+		t.Fatal("nil library did not fall back to baked cards")
+	}
+	if len(c.list) != len(cards) {
+		t.Fatalf("fallback library = %d cards, want baked %d", len(c.list), len(cards))
+	}
+}
+
+// TestCardShowCyclesInjectedLibrary checks Left/Right cycle within the injected
+// set and wrap around, never reaching the baked cards.
+func TestCardShowCyclesInjectedLibrary(t *testing.T) {
+	p := newCardPlatform()
+	injected := []CardAsset{
+		testCard("A", []byte{0xF0, 0xFF}),
+		testCard("B", []byte{0x0F, 0x00}),
+	}
+	c := NewCardShowWith(injected).(*CardShow)
+	c.Start(p)
+
+	press := func(b Buttons) {
+		p.prev = Buttons{}
+		p.buttons = b
+		c.Update(p)
+		p.prev = p.buttons
+		p.buttons = Buttons{}
+		c.Update(p)
+	}
+
+	press(Buttons{Right: true})
+	if c.card.Name != "B" {
+		t.Fatalf("Right: card=%q, want B", c.card.Name)
+	}
+	press(Buttons{Right: true})
+	if c.card.Name != "A" {
+		t.Fatalf("Right wrap: card=%q, want A", c.card.Name)
+	}
+	press(Buttons{Left: true})
+	if c.card.Name != "B" {
+		t.Fatalf("Left wrap: card=%q, want B", c.card.Name)
+	}
+}

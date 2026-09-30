@@ -4,9 +4,11 @@ hello.txt
 demo.elf
 techeck.elf
 sim-out/
+.openchamber/
 
 # Source card imagery for tools/make_card.py: user-supplied, often copyrighted.
-# Only the generator is committed; assets/cards/ and the baked masks it produces
-# are rebuilt by `make` and never checked in.
-assets/cards/
+# Only the generator is committed; assets/cards/ (or a symlink to the shared
+# library, see tools/cards_dir.sh) and the baked masks it produces are rebuilt
+# by `make` and never checked in.
+assets/cards
 cartridge/cards_data.go
