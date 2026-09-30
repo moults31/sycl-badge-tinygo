@@ -24,9 +24,10 @@ type Factory struct {
 // Platform is the cart-facing half of the runtime: a backbuffer to draw into
 // and this frame's controls. It never touches the panel or the pins itself.
 type Platform struct {
-	frame   []uint16
-	buttons Buttons
-	prev    Buttons
+	frame     []uint16
+	buttons   Buttons
+	prev      Buttons
+	backlight uint8
 }
 
 // Frame returns the shared Width*Height RGB565 backbuffer, row-major.
@@ -34,6 +35,11 @@ func (p *Platform) Frame() []uint16 { return p.frame }
 
 // Buttons returns this frame's control snapshot.
 func (p *Platform) Buttons() Buttons { return p.buttons }
+
+// Backlight requests a panel backlight brightness for this frame (0..255).
+// The runtime restores full brightness at the start of every frame, so a cart
+// must set it each frame it wants it dimmed or pulsing.
+func (p *Platform) Backlight(level uint8) { p.backlight = level }
 
 func pressed(now, was bool) bool { return now && !was }
 
@@ -127,7 +133,7 @@ type Runner struct {
 // NewRunner wires a runtime to a display and an environment.
 func NewRunner(env Env, disp Display, lib []Factory) *Runner {
 	return &Runner{
-		p:          &Platform{frame: make([]uint16, Width*Height)},
+		p:          &Platform{frame: make([]uint16, Width*Height), backlight: 255},
 		env:        env,
 		disp:       disp,
 		lib:        lib,
@@ -166,6 +172,9 @@ func (r *Runner) Step() {
 	r.now = r.env.Millis()
 	frameStart := r.now
 
+	// Full backlight every frame; a cart may lower it for this frame only.
+	r.p.backlight = 255
+
 	switch r.state {
 	case stMenu:
 		r.stepMenu()
@@ -176,6 +185,7 @@ func (r *Runner) Step() {
 	}
 
 	r.disp.Present(r.p.frame)
+	r.disp.SetBacklight(r.p.backlight)
 
 	if elapsed := r.env.Millis() - frameStart; elapsed < r.frameMs {
 		r.env.Sleep(r.frameMs - elapsed)

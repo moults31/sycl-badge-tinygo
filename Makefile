@@ -20,7 +20,7 @@ OCD := $(OPENOCD) -f $(OCD_INTERFACE) -f $(OCD_TARGET) -c "adapter speed $(OCD_S
 # Override to pick a specific port, e.g. `make monitor PORT=/dev/cu.usbmodem2101`
 PORT       ?=
 
-.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim test
+.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim test card-sample
 
 all: build
 
@@ -51,6 +51,12 @@ sim:
 # Host-side unit tests for the cartridge runtime.
 test:
 	go test ./cartridge/...
+
+# Regenerate the committed sample card asset (original synthetic art, no
+# third-party imagery) from tools/make_card.py.
+card-sample:
+	python3 tools/make_card.py --sample --name VOLTLET --types Electric \
+		--rarity UNCOMMON -o cartridge/card_data.go
 
 # Mass-storage load: the badge mounts as RP2350 when held in BOOTSEL mode
 # (hold RESET + BOOT_SEL, release RESET, release BOOT_SEL).

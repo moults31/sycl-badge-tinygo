@@ -33,9 +33,12 @@ func RGB565(r, g, b uint8) uint16 {
 }
 
 // Display presents one finished frame. The frame is Width*Height standard
-// RGB565 pixels, row-major (index y*Width+x).
+// RGB565 pixels, row-major (index y*Width+x). SetBacklight sets the panel
+// backlight brightness (0 = off, 255 = full); the runtime restores it to full
+// at the start of every frame unless a cart lowers it.
 type Display interface {
 	Present(frame []uint16)
+	SetBacklight(level uint8)
 }
 
 // Env is everything the runtime needs from the world: the current button

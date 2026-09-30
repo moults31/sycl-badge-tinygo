@@ -5,10 +5,10 @@ A minimal TinyGo firmware for the **SYCL Badge V2** — an RP2354B board
 (revision 2) hardware.
 
 On boot it shows a **cartridge menu** on the 160x128 LCD. Press **A** to launch
-a cartridge — a `PLASMA` effect, a `ZEROMAN` platformer, and a `PANIC TEST`
-diagnostic — and hold **Start+Select** for 250 ms to return to the menu.
-Cartridges are Go values compiled into this one firmware; see
-[Cartridge runtime](#cartridge-runtime).
+a cartridge — a `PLASMA` effect, a `ZEROMAN` platformer, a `PANIC TEST`
+diagnostic, and a `CARD SHOW` lightshow — and hold **Start+Select** for 250 ms
+to return to the menu. Cartridges are Go values compiled into this one
+firmware; see [Cartridge runtime](#cartridge-runtime).
 
 > **This is a hobby project.** Code here is largely AI-generated and not
 > guaranteed to be human-reviewed. See [AI_USAGE.md](AI_USAGE.md) before
@@ -45,11 +45,16 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
   the menu / launch / `recover` loop, and the carts. It imports no hardware, so
   it is unit-tested and simulated on the host.
   - `plasma.go` — the plasma effect.
+  - `pokecard.go` — the card art-box shinethrough lightshow (`CARD SHOW`), plus
+    the generated `card_data.go` asset (see
+    [Card shinethrough lightshow](#card-shinethrough-lightshow)).
   - `zeroman*.go` — the platformer port (types, player, enemies, effects, the
     game loop) plus generated `zeroman_gfx.go` and `zeroman_stage.go`.
   - `panictest.go` — the phase-1 recover diagnostic.
 - `cmd/sim` — the host simulator: replays a scripted scenario and writes PNG
   frames (`make sim`).
+- `tools/make_card.py` — generates the baked card lightshow asset from a card's
+  art box (or an original synthetic sample).
 - `tools/make_zeroman_gfx.py`, `tools/make_zeroman_stage.py` — generate the
   zeroman art (RGB565 palettes + packed indices) and stage data from the
   reference cart.
@@ -89,8 +94,45 @@ make sim    # writes sim-out/01-menu.png, 03-plasma-later.png, ...
 
 `make sim` renders the menu, plasma at two points in time, the menu after the
 exit chord, a relaunch that is byte-identical to the first plasma frame (proof
-of a fresh `Start`), the zeroman title and playfield, and the menu after the
-panic cart is recovered.
+of a fresh `Start`), the zeroman title and playfield, the menu after the
+panic cart is recovered, and the card lightshow's idle, breathing, attack, and
+calibration frames.
+
+### Card shinethrough lightshow
+
+`CARD SHOW` (`cartridge/pokecard.go`) backlights a physical card laid on the
+LCD. Light diffuses through the card stock, so the show does not reproduce the
+art — it drives a coarse, soft **glow mask** derived from the art box, tinted
+by a small palette and animated as breathing, a sweeping holo band, drifting
+sparkles, and an A-button flash. The whole panel's intensity also breathes
+through the backlight PWM.
+
+Because diffusion washes out fine detail, the asset is tiny (a 4-bit mask
+stretched across the panel and bilinearly upscaled). It is **baked at compile
+time**; no third-party card imagery is bundled. Generate one from your own card
+image, cropped to the art box:
+
+```sh
+python3 tools/make_card.py card.png --art-box L T R B \
+    --lcd-window 0.18 0.22 0.82 0.70 \
+    --name PIKACHU --set BASE --types Electric --rarity RARE \
+    -o cartridge/card_data.go
+
+# or a self-contained original test asset:
+python3 tools/make_card.py --sample --name VOLTLET --types Electric \
+    -o cartridge/card_data.go --preview sim-out/card-asset-preview.png
+```
+
+`--lcd-window` (normalized to the art box) crops the mask to the region that
+actually sits over the panel, so the glow lines up 1:1 with the print; omit it
+and the whole art box is used. It is the one measurement to take from the
+mechanical build.
+
+The mask is authored in LCD pixel coordinates for the nominal card placement
+from the mechanical plan. Press **Select** in the running cart to toggle a
+calibration overlay (border, crosshair, rotation tick): the joystick nudges the
+mask and **A**/**B** step the rotation until the glow sits under the printed
+art. Calibration is per session (RAM only) in this version.
 
 ### Zeroman
 
@@ -155,9 +197,10 @@ Other notes:
   the driver just waits for the power-on reset to settle.
 - SPI0 is write-only. `SDI` is set to `machine.NoPin` — this both matches the
   hardware (no MISO) and prevents the SPI peripheral from claiming GPIO0.
-- The backlight is on `BKLT` (GPIO16). It is driven high as a plain GPIO, which
-  the reference uses as full brightness (its PWM `set_level`). The panel's
-  `TFT_LITE` rail is tied to VBUS.
+- The backlight is on `BKLT` (GPIO16). It is driven by **PWM** (RP2350 slice 0,
+  channel A, ~200 kHz) so carts can breathe or pulse the whole panel; level 255
+  is the reference firmware's full brightness. The panel's `TFT_LITE` rail is
+  tied to VBUS, so this is an enable/duty control rather than a boost input.
 
 If red and blue come out swapped on hardware, set the `BGR` bit in `MADCTL`
 (i.e. `0x68` instead of `0x60`); the image data is standard RGB565 (high byte

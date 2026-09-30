@@ -16,14 +16,17 @@ func (e *fakeEnv) Millis() uint32   { return e.t }
 func (e *fakeEnv) Sleep(ms uint32)  { e.t += ms }
 
 type fakeDisplay struct {
-	last   []uint16
-	frames int
+	last      []uint16
+	frames    int
+	backlight uint8
 }
 
 func (d *fakeDisplay) Present(f []uint16) {
 	d.last = append(d.last[:0], f...)
 	d.frames++
 }
+
+func (d *fakeDisplay) SetBacklight(level uint8) { d.backlight = level }
 
 func newTestRunner(lib []Factory) (*Runner, *fakeEnv, *fakeDisplay) {
 	env := &fakeEnv{step: 16}

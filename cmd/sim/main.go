@@ -32,12 +32,17 @@ func (e *stepEnv) Buttons() cartridge.Buttons { return e.cur }
 func (e *stepEnv) Millis() uint32             { return e.t }
 func (e *stepEnv) Sleep(ms uint32)            { e.t += ms }
 
-// captureDisplay keeps the most recent presented frame.
-type captureDisplay struct{ last []uint16 }
+// captureDisplay keeps the most recent presented frame and backlight level.
+type captureDisplay struct {
+	last      []uint16
+	backlight uint8
+}
 
 func (d *captureDisplay) Present(f []uint16) {
 	d.last = append(d.last[:0], f...)
 }
+
+func (d *captureDisplay) SetBacklight(level uint8) { d.backlight = level }
 
 func main() {
 	out := flag.String("out", "sim-out", "directory for rendered PNG frames")
@@ -50,6 +55,7 @@ func main() {
 		{Name: "PLASMA", New: cartridge.NewPlasma},
 		{Name: "ZEROMAN", New: cartridge.NewZeroman},
 		{Name: "PANIC TEST", New: cartridge.NewPanicTest},
+		{Name: "CARD SHOW", New: cartridge.NewCardShow},
 	}
 
 	env := &stepEnv{stepMs: 16}
@@ -69,7 +75,7 @@ func main() {
 			fatal(err)
 		}
 		sum := md5.Sum(frameBytes(disp.last))
-		fmt.Printf("%-32s %08x\n", name, sum[:4])
+		fmt.Printf("%-32s %08x bl=%3d\n", name, sum[:4], disp.backlight)
 	}
 
 	var (
@@ -77,6 +83,7 @@ func main() {
 		a     = cartridge.Buttons{A: true}
 		down  = cartridge.Buttons{Down: true}
 		chord = cartridge.Buttons{Start: true, Select: true}
+		sel   = cartridge.Buttons{Select: true}
 	)
 
 	step(none, 3)
@@ -121,6 +128,23 @@ func main() {
 	step(a, 1)
 	step(none, 2)
 	dump("10-menu-after-panic.png")
+
+	// Select and launch the card lightshow, then capture the idle glow, a
+	// later breathing/holo phase, an attack flash, and the calibration overlay.
+	step(down, 1)
+	step(none, 1)
+	step(a, 1)
+	step(none, 1)
+	dump("11-card-idle.png")
+	step(none, 90)
+	dump("12-card-breathing.png")
+	step(a, 1)
+	step(none, 2)
+	dump("13-card-attack.png")
+	step(none, 30)
+	step(sel, 1)
+	step(none, 1)
+	dump("14-card-calibration.png")
 
 	fmt.Printf("wrote frames to %s/\n", *out)
 }
