@@ -45,7 +45,7 @@ Output
 A Go source file (package ``cartridge``) defining ``var cards = []CardAsset{...}``
 (the default), or, with ``--format json``, the same assets as JSON for the host
 simulator (``cmd/simui``) to load at runtime. Each asset also carries an
-``ambient`` RGB triple — the background wash tint used by the render to keep
+``ambient`` RGB triple - the background wash tint used by the render to keep
 the unlit card dim and separate from the subject. The generated Go file is
 gitignored and rebuilt by ``make`` (see the Makefile).
 """

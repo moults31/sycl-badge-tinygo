@@ -131,7 +131,7 @@ and loads the assets it emits — so dropping a card in and relaunching the sim 
 enough. The banner reports which set was loaded; with no manifest (or no
 Python/Pillow) it falls back to the cards already baked into the binary. The
 firmware still bakes its cards at build time through `make build`/`card-data`, so
-both use one generator. In CARD SHOW, **←/→ (or A/D) cycle the loaded cards** —
+both use one generator. In CARD SHOW, **left/right (or A/D) cycle the loaded cards**;
 Select's overlay shows the current name and `n/total` index.
 
 Extra flags pass through, e.g.
@@ -193,17 +193,17 @@ build time and gitignored** — no card imagery and no derived mask is committed
   and CI still compile (CI installs Pillow for this).
 
 Masks separate the card's **subject from its background** automatically: by
-default the generator runs a U²-Net saliency matte (`rembg`, CPU) over the art
+default the generator runs a U2-Net saliency matte (`rembg`, CPU) over the art
 box and gates the stretched luminance by that silhouette, so the creature
 glows out of a near-black ambient wash instead of rendering a flat luminance
 photo. Fallbacks, no per-card config needed:
 
-- `rembg`/`onnxruntime` not installed (or the model download fails) → plain
+- `rembg`/`onnxruntime` not installed (or the model download fails) -> plain
   stretched luminance, with a `make_card:` warning naming the affected cards;
-- `"subject": "luma" | "sat" | "luma*sat"` in a manifest entry → the manual
+- `"subject": "luma" | "sat" | "luma*sat"` in a manifest entry -> the manual
   derivations (`sat` = color-saturation channel, percentile-stretched);
-- `"invert": true` → inverted luminance (line-art look), bypassing the matte;
-- `"mask": "file.png"` → your own painted glow/silhouette, always winning.
+- `"invert": true` -> inverted luminance (line-art look), bypassing the matte;
+- `"mask": "file.png"` -> your own painted glow/silhouette, always winning.
 
 The bake also derives an `ambient` tint per card (a dim shade of the
 signature color; overridable via `"ambient": [r, g, b]`). The render keeps
@@ -235,11 +235,11 @@ Key flags (CLI or manifest fields):
   makes the glow line up 1:1 with the print instead of showing a scaled-down
   picture of the whole art. `"fit"` centres a panel-sized window automatically;
   it is the one measurement the mechanical build will refine.
-- `subject` — `auto` (default: U²-Net matte, see above), `luma`, `sat`, or
+- `subject` - `auto` (default: U2-Net matte, see above), `luma`, `sat`, or
   `luma*sat`; `--subject` is the single-card CLI equivalent.
 - `glow_color: R G B` — override the signature color (a busy card background can
   otherwise dominate the auto-picked color).
-- `ambient: R G B` — override the background wash tint (default: a dim shade of
+- `ambient: R G B` - override the background wash tint (default: a dim shade of
   the signature color).
 - `invert` — glow where the art is *dark* (a line-art/negative look that lights
   up a card's outlines and features).
