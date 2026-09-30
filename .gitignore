@@ -6,5 +6,7 @@ techeck.elf
 sim-out/
 
 # Source card imagery for tools/make_card.py: user-supplied, often copyrighted.
-# Only the generated cartridge/card_data.go (a derived mask) is committed.
+# Only the generator is committed; assets/cards/ and the baked masks it produces
+# are rebuilt by `make` and never checked in.
 assets/cards/
+cartridge/cards_data.go

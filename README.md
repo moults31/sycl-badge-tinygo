@@ -45,8 +45,8 @@ RP2350 needs (`xoscFreq`, UART/SPI/I2C default pins, USB IDs).
   the menu / launch / `recover` loop, and the carts. It imports no hardware, so
   it is unit-tested and simulated on the host.
   - `plasma.go` — the plasma effect.
-  - `pokecard.go` — the card art-box shinethrough lightshow (`CARD SHOW`), plus
-    the generated `card_data.go` asset (see
+  - `pokecard.go` — the card art-box shinethrough lightshow (`CARD SHOW`); its
+    `cards_data.go` asset is generated at build time and gitignored (see
     [Card shinethrough lightshow](#card-shinethrough-lightshow)).
   - `zeroman*.go` — the platformer port (types, player, enemies, effects, the
     game loop) plus generated `zeroman_gfx.go` and `zeroman_stage.go`.
@@ -95,8 +95,8 @@ make sim    # writes sim-out/01-menu.png, 03-plasma-later.png, ...
 `make sim` renders the menu, plasma at two points in time, the menu after the
 exit chord, a relaunch that is byte-identical to the first plasma frame (proof
 of a fresh `Start`), the zeroman title and playfield, the menu after the
-panic cart is recovered, and the card lightshow's idle, breathing, attack, and
-calibration frames.
+panic cart is recovered, and the card lightshow — one frame per baked card,
+then a breathing frame, an attack flash, and the calibration overlay.
 
 ### Card shinethrough lightshow
 
@@ -105,34 +105,54 @@ LCD. Light diffuses through the card stock, so the show does not reproduce the
 art — it drives a coarse, soft **glow mask** derived from the art box, tinted
 by a small palette and animated as breathing, a sweeping holo band, drifting
 sparkles, and an A-button flash. The whole panel's intensity also breathes
-through the backlight PWM.
+through the backlight PWM. **Left/Right** cycle the baked card library;
+**Select** toggles the alignment overlay; **A** fires the attack flash.
 
-Because diffusion washes out fine detail, the asset is tiny (a 4-bit mask
-stretched across the panel and bilinearly upscaled). It is **baked at compile
-time**; no third-party card imagery is bundled. Generate one from your own card
-image, cropped to the art box:
+Because diffusion washes out fine detail, each asset is tiny (a 4-bit mask
+stretched across the panel and bilinearly upscaled). Assets are **generated at
+build time and gitignored** — no card imagery and no derived mask is committed.
+`make build`/`size`/`test`/`sim` run `tools/make_card.py`:
 
-```sh
-python3 tools/make_card.py card.png --art-box L T R B \
-    --lcd-window 0.18 0.22 0.82 0.70 \
-    --name PIKACHU --set BASE --types Electric --rarity RARE \
-    -o cartridge/card_data.go
+- if `assets/cards/manifest.json` exists, it bakes one `CardAsset` per entry;
+- otherwise it emits a single **original synthetic sample**, so a fresh clone
+  and CI still compile (CI installs Pillow for this).
 
-# or a self-contained original test asset:
-python3 tools/make_card.py --sample --name VOLTLET --types Electric \
-    -o cartridge/card_data.go --preview sim-out/card-asset-preview.png
+Source images live under the gitignored `assets/cards/`. A manifest entry:
+
+```json
+{"file": "charizard.webp", "name": "CHARIZARD", "set": "CLASSIC",
+ "types": ["Fire"], "art_box": [22, 96, 378, 295],
+ "lcd_window": "fit", "glow_color": [255, 120, 30]}
 ```
 
-`--lcd-window` (normalized to the art box) crops the mask to the region that
-actually sits over the panel, so the glow lines up 1:1 with the print; omit it
-and the whole art box is used. It is the one measurement to take from the
-mechanical build.
+Single-card CLI:
 
-The mask is authored in LCD pixel coordinates for the nominal card placement
-from the mechanical plan. Press **Select** in the running cart to toggle a
-calibration overlay (border, crosshair, rotation tick): the joystick nudges the
-mask and **A**/**B** step the rotation until the glow sits under the printed
-art. Calibration is per session (RAM only) in this version.
+```sh
+python3 tools/make_card.py assets/cards/your-card.webp --art-box L T R B \
+    --lcd-fit --glow-color 255 120 30 --name CHARIZARD --set CLASSIC \
+    --types Fire -o cartridge/cards_data.go --preview-dir sim-out/card-previews
+```
+
+Key flags (CLI or manifest fields):
+
+- `art_box: L T R B` — the illustration window in source pixels.
+- `lcd_window: l t r b`, or `"fit"` — the part of the art box that sits over the
+  panel. The panel (35×28 mm) is smaller than the art box, so cropping to it
+  makes the glow line up 1:1 with the print instead of showing a scaled-down
+  picture of the whole art. `"fit"` centres a panel-sized window automatically;
+  it is the one measurement the mechanical build will refine.
+- `glow_color: R G B` — override the signature color (a busy card background can
+  otherwise dominate the auto-picked color).
+- `invert` — glow where the art is *dark* (a line-art/negative look that lights
+  up a card's outlines and features).
+- `mask: file` — paint your own glow/silhouette over the card image (alpha or
+  grayscale) and use it instead of luminance; the way to get a true silhouette
+  when the art has no bright-subject/dark-background separation.
+- `gamma`/`floor` — contrast shape of the derived glow.
+
+Calibration is per card and per session (RAM only). The overlay draws the card
+name, a border, a crosshair, and a rotation tick; the joystick nudges the mask
+and **A**/**B** step the rotation until the glow sits under the printed art.
 
 ### Zeroman
 

@@ -20,7 +20,14 @@ OCD := $(OPENOCD) -f $(OCD_INTERFACE) -f $(OCD_TARGET) -c "adapter speed $(OCD_S
 # Override to pick a specific port, e.g. `make monitor PORT=/dev/cu.usbmodem2101`
 PORT       ?=
 
-.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim test card-sample
+# Baked card lightshow assets. The source card images (assets/cards/) and the
+# generated Go are both gitignored, so this is rebuilt on every build. With no
+# manifest/sources present (e.g. a fresh clone or CI) it falls back to the
+# original synthetic sample, so the firmware still compiles.
+CARD_MANIFEST ?= assets/cards/manifest.json
+CARD_OUT      ?= cartridge/cards_data.go
+
+.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim test card-data card-sample
 
 all: build
 
@@ -34,29 +41,36 @@ uninstall-board:
 	@rm -f "$(BOARD_DST)"
 	@echo "removed $(BOARD_DST)"
 
-build: install-board
+card-data:
+	@if [ -f "$(CARD_MANIFEST)" ]; then \
+		python3 tools/make_card.py --manifest "$(CARD_MANIFEST)" -o "$(CARD_OUT)"; \
+	else \
+		echo "card-data: no $(CARD_MANIFEST); using synthetic sample"; \
+		python3 tools/make_card.py --sample --name VOLTLET --types Electric -o "$(CARD_OUT)"; \
+	fi
+
+build: install-board card-data
 	tinygo build -target=$(TARGET) -o hello.uf2 .
 	tinygo build -target=$(TARGET) -o hello.elf .
 	@ls -la hello.uf2
 
-size: install-board
+size: install-board card-data
 	tinygo build -target=$(TARGET) -size=short -o /dev/null .
 
 # Host-side build of the cartridge runtime (no machine package involved):
 # runs the scripted menu/plasma/panic scenario and writes PNG frames.
 SIM_OUT ?= sim-out
-sim:
+sim: card-data
 	go run ./cmd/sim -out $(SIM_OUT)
 
 # Host-side unit tests for the cartridge runtime.
-test:
+test: card-data
 	go test ./cartridge/...
 
-# Regenerate the committed sample card asset (original synthetic art, no
-# third-party imagery) from tools/make_card.py.
+# Regenerate the baked assets from the local manifest (see card-data).
 card-sample:
 	python3 tools/make_card.py --sample --name VOLTLET --types Electric \
-		--rarity UNCOMMON -o cartridge/card_data.go
+		--rarity UNCOMMON -o "$(CARD_OUT)"
 
 # Mass-storage load: the badge mounts as RP2350 when held in BOOTSEL mode
 # (hold RESET + BOOT_SEL, release RESET, release BOOT_SEL).

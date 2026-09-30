@@ -30,13 +30,20 @@ func (a *CardAsset) nib(x, y int) int {
 	return int(b & 0x0F)
 }
 
+// cardCalib is the per-card placement trim (LCD pixels / shear units).
+type cardCalib struct {
+	offX, offY, rot int
+}
+
 // CardShow runs the "shinethrough" lightshow behind the physical card laid on
 // the LCD. It samples the baked glow mask, breathes it, sweeps a holo band
 // across it, adds a type-tinted ambient wash and drifting sparkles, and fires
-// a flash on A. Select toggles a calibration overlay (joystick nudges the mask,
-// A/B rotate it) for lining the glow up with the printed art.
+// a flash on A. Left/Right cycle the baked library; Select toggles a
+// calibration overlay (joystick nudges the mask, A/B rotate it) for lining the
+// glow up with the printed art.
 type CardShow struct {
 	card CardAsset
+	cal  *cardCalib
 
 	sin  [256]uint8 // sin, biased to 0..255
 	ramp [256]uint16
@@ -45,10 +52,9 @@ type CardShow struct {
 	flash uint32
 	spks  []spark
 
-	// session calibration (LCD pixels / shear units)
-	offX, offY int
-	rot        int
-	calib      bool
+	idx   int
+	calib bool
+	cals  []cardCalib
 }
 
 type spark struct {
@@ -69,16 +75,23 @@ func NewCardShow() Cartridge { return &CardShow{} }
 // Name implements Cartridge.
 func (c *CardShow) Name() string { return "CARD SHOW" }
 
-// Start loads the baked asset and rebuilds all per-launch state.
+// Start loads the baked library and rebuilds all per-launch state.
 func (c *CardShow) Start(p *Platform) {
-	c.card = sampleCard
 	c.t, c.flash = 0, 0
-	c.offX, c.offY, c.rot = 0, 0, 0
+	c.idx = 0
 	c.calib = false
+	c.cals = make([]cardCalib, len(cards))
 
 	for i := 0; i < 256; i++ {
 		c.sin[i] = uint8((math.Sin(float64(i)*2*math.Pi/256) + 1) * 127.5)
 	}
+	c.loadCard()
+}
+
+// loadCard (re)builds the per-card ramp and sparkle field for cards[idx].
+func (c *CardShow) loadCard() {
+	c.card = cards[c.idx]
+	c.cal = &c.cals[c.idx]
 	c.buildRamp()
 
 	// Deterministic sparkle field (fixed seed so frames hash-stable).
@@ -102,7 +115,7 @@ func (c *CardShow) Start(p *Platform) {
 // buildRamp interpolates the palette into a 256-entry dark->bright RGB565 ramp.
 func (c *CardShow) buildRamp() {
 	n := len(c.card.Palette)
-	if n == 0 {
+	if n < 2 {
 		return
 	}
 	for i := 0; i < 256; i++ {
@@ -131,31 +144,46 @@ func (c *CardShow) Update(p *Platform) {
 	if pressed(p.buttons.Select, p.prev.Select) {
 		c.calib = !c.calib
 	}
+	if pressed(p.buttons.A, p.prev.A) && !c.calib {
+		c.flash = cardFlashFrames
+	}
+
 	if c.calib {
 		// Held directions nudge continuously; A/B step the rotation.
 		if p.buttons.Left {
-			c.offX--
+			c.cal.offX--
 		}
 		if p.buttons.Right {
-			c.offX++
+			c.cal.offX++
 		}
 		if p.buttons.Up {
-			c.offY--
+			c.cal.offY--
 		}
 		if p.buttons.Down {
-			c.offY++
+			c.cal.offY++
 		}
 		if pressed(p.buttons.A, p.prev.A) {
-			c.rot--
+			c.cal.rot--
 		}
 		if pressed(p.buttons.B, p.prev.B) {
-			c.rot++
+			c.cal.rot++
 		}
-		c.offX = clampInt(c.offX, -48, 48)
-		c.offY = clampInt(c.offY, -48, 48)
-		c.rot = clampInt(c.rot, -8, 8)
-	} else if pressed(p.buttons.A, p.prev.A) {
-		c.flash = cardFlashFrames
+		c.cal.offX = clampInt(c.cal.offX, -48, 48)
+		c.cal.offY = clampInt(c.cal.offY, -48, 48)
+		c.cal.rot = clampInt(c.cal.rot, -8, 8)
+	} else {
+		// Cycle the baked library.
+		prev := c.idx
+		if pressed(p.buttons.Left, p.prev.Left) && len(cards) > 0 {
+			c.idx = (c.idx - 1 + len(cards)) % len(cards)
+		}
+		if pressed(p.buttons.Right, p.prev.Right) && len(cards) > 0 {
+			c.idx = (c.idx + 1) % len(cards)
+		}
+		if c.idx != prev {
+			c.flash = 0
+			c.loadCard()
+		}
 	}
 
 	c.render(p)
@@ -192,11 +220,11 @@ func (c *CardShow) render(p *Platform) {
 
 	for y := 0; y < Height; y++ {
 		// Small-angle rotation as a per-row x shear.
-		sh := (y - Height/2) * c.rot / 64
+		sh := (y - Height/2) * c.cal.rot / 64
 		row := y * Width
 		hy := y * 2
 		for x := 0; x < Width; x++ {
-			a := c.sample(x+sh-c.offX, y-c.offY) // 0..15
+			a := c.sample(x+sh-c.cal.offX, y-c.cal.offY) // 0..15
 			idx := a * 17
 
 			// Breathing applies to the glow itself.
@@ -224,7 +252,7 @@ func (c *CardShow) render(p *Platform) {
 	c.drawSparks(fb, bf)
 
 	if c.calib {
-		c.drawGuides(fb)
+		c.drawGuides(p)
 	}
 }
 
@@ -283,8 +311,9 @@ func (c *CardShow) drawSparks(fb []uint16, bf int) {
 }
 
 // drawGuides overlays the registration aids used to align the glow with the
-// printed art: a border, center crosshair, and corner ticks.
-func (c *CardShow) drawGuides(fb []uint16) {
+// printed art: a border, center crosshair, rotation tick, and the card name.
+func (c *CardShow) drawGuides(p *Platform) {
+	fb := p.Frame()
 	dim := RGB565(0xFF, 0x40, 0x80)
 
 	for x := 0; x < Width; x++ {
@@ -296,16 +325,22 @@ func (c *CardShow) drawGuides(fb []uint16) {
 		fb[y*Width+Width-1] = dim
 	}
 
-	cx, cy := Width/2+c.offX, Height/2+c.offY
+	cx, cy := Width/2+c.cal.offX, Height/2+c.cal.offY
 	for d := -8; d <= 8; d++ {
 		blend(fb, cx+d, cy, 255, 255, 255, 255)
 		blend(fb, cx, cy+d, 255, 255, 255, 255)
 	}
 	// Rotation indicator ticks along the top edge.
-	tx := cx + c.rot*10
+	tx := cx + c.cal.rot*10
 	for d := 0; d < 4; d++ {
 		blend(fb, tx, 2+d, 0x40, 0xFF, 0xFF, 255)
 	}
+
+	name := c.card.Name
+	if len(name) > 19 {
+		name = name[:19]
+	}
+	p.drawText(3, Height-10, name, RGB565(0xFF, 0xFF, 0xFF), RGB565(0x10, 0x10, 0x10))
 }
 
 // blend lerps a frame pixel (RGB565) toward (r,g,b) by weight w.

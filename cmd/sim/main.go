@@ -84,6 +84,7 @@ func main() {
 		down  = cartridge.Buttons{Down: true}
 		chord = cartridge.Buttons{Start: true, Select: true}
 		sel   = cartridge.Buttons{Select: true}
+		right = cartridge.Buttons{Right: true}
 	)
 
 	step(none, 3)
@@ -129,22 +130,28 @@ func main() {
 	step(none, 2)
 	dump("10-menu-after-panic.png")
 
-	// Select and launch the card lightshow, then capture the idle glow, a
-	// later breathing/holo phase, an attack flash, and the calibration overlay.
+	// Select and launch the card lightshow, then capture every baked card
+	// (Left/Right cycle the library), a later breathing frame, an attack
+	// flash, and the calibration overlay.
 	step(down, 1)
 	step(none, 1)
 	step(a, 1)
 	step(none, 1)
-	dump("11-card-idle.png")
+	dump("11-card-00.png")
+	for i := 1; i < 5; i++ {
+		step(right, 1)
+		step(none, 1)
+		dump(fmt.Sprintf("12-card-%02d.png", i))
+	}
 	step(none, 90)
-	dump("12-card-breathing.png")
+	dump("13-card-breathing.png")
 	step(a, 1)
 	step(none, 2)
-	dump("13-card-attack.png")
+	dump("14-card-attack.png")
 	step(none, 30)
 	step(sel, 1)
 	step(none, 1)
-	dump("14-card-calibration.png")
+	dump("15-card-calibration.png")
 
 	fmt.Printf("wrote frames to %s/\n", *out)
 }

@@ -40,6 +40,12 @@ jobs:
       - name: Show version
         run: tinygo version
 
+      # The card lightshow assets are generated at build time (the source card
+      # images are not committed), so make_card.py needs Pillow. With no
+      # manifest/sources present it emits the synthetic sample instead.
+      - name: Install Pillow for the card asset generator
+        run: python3 -m pip install --user pillow
+
       # `tinygo build` is the real compile gate: it type-checks the whole
       # program, including the TinyGo-only `machine` package that a stock Go
       # toolchain cannot resolve.

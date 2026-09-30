@@ -70,7 +70,7 @@ func TestCardShowCalibrationChangesFrame(t *testing.T) {
 	}
 
 	c.calib = false
-	c.offX = 12
+	c.cal.offX = 12
 	c.render(p)
 	if framesEqual(base, p.frame) {
 		t.Fatal("offset trim did not change the frame")

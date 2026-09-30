@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn a card's art-box image into a baked lightshow asset for the badge.
+"""Turn card art-box images into a baked lightshow asset for the badge.
 
 The badge backlights a physical card laid on the LCD. Light diffuses through
 the card stock, so the asset is a *coarse, soft luminance mask* (the "glow"
@@ -9,39 +9,51 @@ bilinearly upscaled on-device.
 
 Inputs
 ------
-- A card image supplied by the user (PNG/JPG), cropped to the art box. We do
-  NOT bundle third-party card imagery. Bring your own.
+- One or more card images supplied by the user (PNG/JPG/WebP), cropped to the
+  art box. We do NOT commit third-party card imagery -- keep it under
+  ``assets/cards/`` (gitignored). Bring your own.
 - Or ``--sample``: an original, generated test creature, so the pipeline and
   the simulator can be exercised with no copyrighted input at all.
 
+Single card:   pass an image (or --sample) and the crop/colour flags.
+Many cards:    pass --manifest cards.json, a list of entries like
+               {"file": "x.webp", "name": "X", "art_box": [l,t,r,b],
+                "lcd_window": [l,t,r,b], "glow_color": [r,g,b], ...}.
+               Entries whose file is missing are skipped; if none resolve, the
+               synthetic sample is emitted so the build still compiles.
+
+Glow modes (per card)
+---------------------
+- Default: luminance of the art (backlights where the card is bright).
+- ``invert``: luminance inverted (lights the card's dark line-art/features).
+- ``mask``: paint your own glow/silhouette over the card image and use that --
+  the way to get a true silhouette when the art has no bright-subject /
+  dark-background separation.
+
 Output
 ------
-A Go source file (package ``cartridge``) defining one ``CardAsset`` value:
-a packed 4-bit mask, an RGB565 palette, and metadata.
-
-Usage
------
-    # Own card image, art box pixels (left top right bottom):
-    python3 tools/make_card.py card.png --art-box 40 30 360 470 \
-        --name PIKACHU --set BASE --types Electric --rarity RARE \
-        -o cartridge/card_data.go
-
-    # Original synthetic test asset:
-    python3 tools/make_card.py --sample --name VOLTLET --types Electric \
-        -o cartridge/card_data.go --preview sim-out/card-asset-preview.png
+A Go source file (package ``cartridge``) defining ``var cards = []CardAsset{...}``.
+The generated file is gitignored and rebuilt by ``make`` (see the Makefile).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 from dataclasses import dataclass
 from typing import Iterable
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 # Rec.709 luma weights.
 LUMA = (0.2126, 0.7152, 0.0722)
+
+# Standard Pokemon card and badge LCD active-area dimensions, in millimetres.
+CARD_W_MM = 63.5
+LCD_W_MM = 35.04
+LCD_H_MM = 28.03
 
 
 @dataclass
@@ -107,7 +119,7 @@ def make_sample_art(w: int = 400, h: int = 560) -> Image.Image:
     return img
 
 
-# --- pipeline ---------------------------------------------------------------
+# --- geometry ---------------------------------------------------------------
 
 def crop_art(img: Image.Image, box: Iterable[int] | None) -> Image.Image:
     if box is None:
@@ -133,13 +145,15 @@ def crop_window(art: Image.Image, win: Iterable[float] | None) -> Image.Image:
         return art
     l, t, r, b = win
     if not (0 <= l < r <= 1 and 0 <= t < b <= 1):
-        raise SystemExit(f"--lcd-window {tuple(win)} must be ordered fractions in 0..1")
+        raise SystemExit(f"lcd_window {tuple(win)} must be ordered fractions in 0..1")
     w, h = art.size
     box = (round(l * w), round(t * h), round(r * w), round(b * h))
     if box[0] >= box[2] or box[1] >= box[3]:
-        raise SystemExit(f"--lcd-window {tuple(win)} is empty after rounding")
+        raise SystemExit(f"lcd_window {tuple(win)} is empty after rounding")
     return art.crop(box)
 
+
+# --- glow -------------------------------------------------------------------
 
 def glow_gray(img: Image.Image, gamma: float, floor: float) -> Image.Image:
     """Luminance -> a soft 'glow' grayscale, with gamma and a black floor."""
@@ -155,8 +169,31 @@ def glow_gray(img: Image.Image, gamma: float, floor: float) -> Image.Image:
     return lum.point(lut)
 
 
-def downsample(gray: Image.Image, w: int, h: int) -> Image.Image:
-    return gray.resize((w, h), Image.BOX)
+def load_glow(img: Image.Image, art_box, lcd_window, w: int, h: int,
+              gamma: float, floor: float, invert: bool) -> Image.Image:
+    """Build the coarse glow map from the art's luminance."""
+    art = crop_window(crop_art(img, art_box), lcd_window)
+    gray = glow_gray(art, gamma, floor).resize((w, h), Image.BOX)
+    if invert:
+        gray = ImageOps.invert(gray)
+    return gray
+
+
+def load_mask(path: str, art_box, lcd_window, w: int, h: int) -> Image.Image:
+    """Use a user-painted glow/silhouette, registered to the card image.
+
+    The mask is expected in the same pixel space as the source card image (paint
+    over the card in any editor). Its alpha channel is used if present, so an
+    RGBA PNG with the silhouette painted on a transparent background works
+    directly; otherwise its grayscale is used.
+    """
+    m = Image.open(path)
+    if m.mode in ("RGBA", "LA", "PA"):
+        m = m.getchannel("A")
+    else:
+        m = m.convert("L")
+    m = crop_window(crop_art(m, art_box), lcd_window)
+    return m.resize((w, h), Image.BOX)
 
 
 def quantize_4bit(gray: Image.Image) -> list[int]:
@@ -171,6 +208,8 @@ def pack_4bit(vals: list[int]) -> bytes:
         out.append((hi << 4) | lo)
     return bytes(out)
 
+
+# --- palette ----------------------------------------------------------------
 
 def kmeans(samples: list[tuple[int, int, int]], k: int, iters: int = 12) -> list[tuple[int, int, int]]:
     """Tiny pure-Python k-means; sample counts here are ~1e3, so this is fine."""
@@ -222,13 +261,52 @@ def derive_palette(img: Image.Image, coarse: Image.Image, k: int) -> list[tuple[
     return [dark, vivid, (255, 255, 255)]  # type: ignore[return-value]
 
 
+# --- asset ------------------------------------------------------------------
+
+def fitted_window(img_w: int, art_box) -> list[float]:
+    """A centered LCD-sized window within the art box, as normalized fractions.
+
+    Uses the real card width (63.5 mm) to convert source pixels to millimetres,
+    then centres the 35.04x28.03 mm panel footprint in the art box. This is the
+    default until the physical holder is measured.
+    """
+    if art_box is None:
+        raise SystemExit("lcd_window 'fit' needs an art box")
+    l, t, r, b = art_box
+    aw, ah = r - l, b - t
+    pxmm = img_w / CARD_W_MM
+    wpx, hpx = LCD_W_MM * pxmm, LCD_H_MM * pxmm
+    x0, y0 = l + (aw - wpx) / 2, t + (ah - hpx) / 2
+    return [(x0 - l) / aw, (y0 - t) / ah, (x0 - l + wpx) / aw, (y0 - t + hpx) / ah]
+
+
+def build_asset(img: Image.Image, *, art_box, lcd_window, grid, gamma: float,
+                floor: float, invert: bool, mask_path: str | None, palette: int,
+                glow_color, name: str, set_: str, types: list[str], rarity: str) -> Asset:
+    if lcd_window == "fit":
+        lcd_window = fitted_window(img.width, art_box)
+    art = crop_window(crop_art(img, art_box), lcd_window)
+    w, h = grid
+    if mask_path:
+        coarse = load_mask(mask_path, art_box, lcd_window, w, h)
+    else:
+        coarse = load_glow(img, art_box, lcd_window, w, h, gamma, floor, invert)
+    pal = derive_palette(art, coarse, palette)
+    if glow_color:
+        pal[1] = tuple(glow_color)  # type: ignore[assignment]
+    return Asset(
+        name=name, set_=set_, types=types, rarity=rarity,
+        width=w, height=h, mask=pack_4bit(quantize_4bit(coarse)), palette=pal,
+    )
+
+
 # --- output -----------------------------------------------------------------
 
 def go_bytes(b: bytes, per_line: int = 12) -> str:
     lines = []
     for i in range(0, len(b), per_line):
         chunk = b[i:i + per_line]
-        lines.append("\t" + " ".join(f"0x{v:02X}," for v in chunk))
+        lines.append("\t\t" + " ".join(f"0x{v:02X}," for v in chunk))
     return "\n".join(lines)
 
 
@@ -236,35 +314,40 @@ def go_strings(ss: list[str]) -> str:
     return ", ".join('"%s"' % s.replace('"', '\\"') for s in ss)
 
 
-def render_go(a: Asset) -> str:
-    pal = ",\n\t".join(
-        "RGB565(%d, %d, %d)" % (r, g, b) for (r, g, b) in a.palette
-    )
+def render_entry(a: Asset) -> str:
+    pal = ",\n\t\t".join("RGB565(%d, %d, %d)" % (r, g, b) for (r, g, b) in a.palette)
+    return f"""\t{{
+\t\tName:    {go_strings([a.name])},
+\t\tSet:     {go_strings([a.set_])},
+\t\tTypes:   []string{{{go_strings(a.types)}}},
+\t\tRarity:  {go_strings([a.rarity])},
+\t\tMaskW:   {a.width},
+\t\tMaskH:   {a.height},
+\t\tMask: []byte{{
+{go_bytes(a.mask)}
+\t\t}},
+\t\tPalette: []uint16{{
+\t\t{pal},
+\t\t}},
+\t}},"""
+
+
+def render_go(assets: list[Asset]) -> str:
+    body = "\n".join(render_entry(a) for a in assets)
     return f"""// Code generated by tools/make_card.py; DO NOT EDIT.
 //
-// Single-card lightshow asset. The mask is a coarse 4-bit "glow" map derived
-// from the card's art box; the palette runs dark -> bright. This file contains
-// no third-party card imagery: regenerate it from your own card with the tool,
-// or keep the original synthetic sample.
-//
-//   python3 tools/make_card.py <your-card.png> --art-box L T R B -o cartridge/card_data.go
+// The baked lightshow assets the CARD SHOW cartridge renders: coarse 4-bit
+// "glow" masks (luminance of each card's art box, softened and quantized) and
+// dark -> signature color -> white palettes. These are derived low-resolution
+// luminance maps, not card images. The source images and this file are both
+// gitignored; `make` regenerates this from assets/cards/ when present, and
+// falls back to an original synthetic sample otherwise.
 
 package cartridge
 
-// sampleCard is the baked asset the CARDSHOW cartridge renders.
-var sampleCard = CardAsset{{
-\tName:    {go_strings([a.name])},
-\tSet:     {go_strings([a.set_])},
-\tTypes:   []string{{{go_strings(a.types)}}},
-\tRarity:  {go_strings([a.rarity])},
-\tMaskW:   {a.width},
-\tMaskH:   {a.height},
-\tMask: []byte{{
-{go_bytes(a.mask)}
-\t}},
-\tPalette: []uint16{{
-\t{pal},
-\t}},
+// cards is the baked library the CARD SHOW cartridge cycles through.
+var cards = []CardAsset{{
+{body}
 }}
 """
 
@@ -280,13 +363,16 @@ def preview(a: Asset, path: str, w: int = 160, h: int = 128) -> None:
             nib = a.mask[(my * a.width + mx) // 2]
             v = (nib >> 4) if ((my * a.width + mx) % 2 == 0) else (nib & 0xF)
             t = v / 15.0
-            # Piecewise-linear palette lookup.
             pos = t * (len(a.palette) - 1)
             i = min(len(a.palette) - 2, int(pos))
             f = pos - i
             c0, c1 = a.palette[i], a.palette[i + 1]
             d.point((x, y), tuple(int(c0[j] + (c1[j] - c0[j]) * f) for j in range(3)))
     img.save(path)
+
+
+def slug(s: str) -> str:
+    return "".join(c.lower() if c.isalnum() else "-" for c in s).strip("-")
 
 
 def gofmt(src: str) -> str:
@@ -304,57 +390,105 @@ def gofmt(src: str) -> str:
         return src
 
 
+def sample_asset(args) -> Asset:
+    return build_asset(
+        make_sample_art(),
+        art_box=None, lcd_window=None, grid=args.grid, gamma=1.0, floor=0.0,
+        invert=False, mask_path=None, palette=args.palette,
+        glow_color=None, name="VOLTLET", set_="SAMPLE",
+        types=["Electric"], rarity="COMMON",
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("image", nargs="?", help="card art image (PNG/JPG)")
+    ap.add_argument("image", nargs="?", help="card art image (PNG/JPG/WebP)")
     ap.add_argument("--sample", action="store_true", help="use the built-in synthetic test art")
+    ap.add_argument("--manifest", help="JSON list of card entries (multi-card build)")
     ap.add_argument("--art-box", type=int, nargs=4, metavar=("L", "T", "R", "B"),
                     help="art-box crop in source pixels")
     ap.add_argument("--lcd-window", type=float, nargs=4, metavar=("L", "T", "R", "B"),
                     help="region of the art box that sits over the LCD, as "
                          "fractions of the art box (default: all of it)")
+    ap.add_argument("--lcd-fit", action="store_true",
+                    help="centre a panel-sized window in the art box "
+                         "(35.04x28.03 mm of a 63.5 mm card)")
     ap.add_argument("--grid", type=int, nargs=2, default=[40, 32], metavar=("W", "H"),
                     help="coarse mask resolution (default 40 32)")
     ap.add_argument("--gamma", type=float, default=1.0, help="glow gamma (default 1.0)")
     ap.add_argument("--floor", type=float, default=0.0, help="black floor 0..1 (default 0.0)")
+    ap.add_argument("--invert", action="store_true",
+                    help="glow where the art is dark (line-art / negative look)")
+    ap.add_argument("--mask",
+                    help="paint-your-own glow map in the source image's pixel "
+                         "space (alpha channel, else grayscale); used instead of "
+                         "the luminance glow")
     ap.add_argument("--palette", type=int, default=4, help="palette entries (default 4)")
+    ap.add_argument("--glow-color", type=int, nargs=3, metavar=("R", "G", "B"),
+                    help="override the signature/glow color (default: most vivid "
+                         "cluster). Useful when a card's background dominates.")
     ap.add_argument("--name", default="SAMPLE CARD")
     ap.add_argument("--set", dest="set_", default="SAMPLE")
     ap.add_argument("--types", nargs="*", default=["Colorless"])
     ap.add_argument("--rarity", default="COMMON")
-    ap.add_argument("--preview", help="write an upscaled PNG preview to this path")
+    ap.add_argument("--preview", help="write an upscaled PNG preview (single card)")
+    ap.add_argument("--preview-dir", help="write one preview PNG per card (manifest)")
     ap.add_argument("-o", "--out", default="-", help="output Go file, or - for stdout")
     args = ap.parse_args()
 
-    if args.sample:
-        img = make_sample_art()
+    assets: list[Asset] = []
+
+    if args.manifest:
+        with open(args.manifest) as f:
+            data = json.load(f)
+        entries = data["cards"] if isinstance(data, dict) else data
+        base = os.path.dirname(os.path.abspath(args.manifest))
+        for e in entries:
+            path = os.path.join(base, e["file"])
+            if not os.path.exists(path):
+                print(f"make_card: skipping missing {path}", file=sys.stderr)
+                continue
+            mask = e.get("mask")
+            assets.append(build_asset(
+                Image.open(path).convert("RGB"),
+                art_box=e.get("art_box"), lcd_window=e.get("lcd_window"),
+                grid=e.get("grid", args.grid), gamma=e.get("gamma", args.gamma),
+                floor=e.get("floor", args.floor), invert=e.get("invert", args.invert),
+                mask_path=os.path.join(base, mask) if mask else None,
+                palette=e.get("palette", args.palette), glow_color=e.get("glow_color"),
+                name=e.get("name", "CARD"), set_=e.get("set", ""),
+                types=e.get("types", ["Colorless"]), rarity=e.get("rarity", ""),
+            ))
+        if not assets:
+            assets = [sample_asset(args)]
+    elif args.sample:
+        assets = [sample_asset(args)]
     elif args.image:
-        img = Image.open(args.image).convert("RGB")
+        assets = [build_asset(
+            Image.open(args.image).convert("RGB"),
+            art_box=args.art_box,
+            lcd_window=("fit" if args.lcd_fit else args.lcd_window), grid=args.grid,
+            gamma=args.gamma, floor=args.floor, invert=args.invert,
+            mask_path=args.mask, palette=args.palette, glow_color=args.glow_color,
+            name=args.name, set_=args.set_, types=args.types, rarity=args.rarity,
+        )]
     else:
-        ap.error("provide an image or --sample")
-
-    art = crop_art(img, args.art_box)
-    art = crop_window(art, args.lcd_window)
-    gray = glow_gray(art, args.gamma, args.floor)
-    w, h = args.grid
-    coarse = downsample(gray, w, h)
-    vals = quantize_4bit(coarse)
-    pal = derive_palette(art, coarse, args.palette)
-
-    asset = Asset(
-        name=args.name, set_=args.set_, types=args.types, rarity=args.rarity,
-        width=w, height=h, mask=pack_4bit(vals), palette=pal,
-    )
+        ap.error("provide an image, --sample, or --manifest")
 
     if args.preview:
-        preview(asset, args.preview)
+        preview(assets[0], args.preview)
+    if args.preview_dir:
+        os.makedirs(args.preview_dir, exist_ok=True)
+        for a in assets:
+            preview(a, os.path.join(args.preview_dir, slug(a.name or "card") + ".png"))
 
-    out = gofmt(render_go(asset))
+    out = gofmt(render_go(assets))
     if args.out == "-":
         sys.stdout.write(out)
     else:
         with open(args.out, "w") as f:
             f.write(out)
+    print(f"make_card: wrote {len(assets)} card(s) to {args.out or 'stdout'}", file=sys.stderr)
     return 0
 
 
