@@ -25,17 +25,29 @@ Many cards:    pass --manifest cards.json, a list of entries like
 Glow modes (per card)
 ---------------------
 - Default: luminance of the art (backlights where the card is bright).
+- ``subject: "auto"`` -- U2-Net saliency matting (the ``rembg`` package, CPU)
+  extracts the subject's silhouette; the mask is that silhouette multiplied by
+  the stretched luminance, so the creature glows out of a dark background and
+  the card reads as figure on ground instead of a luminance photo. If rembg or
+  its model is not installed, the build falls back to plain luminance with a
+  warning (so CI and fresh clones still compile; install rembg on the build
+  machine for the good look).
+- ``subject: "luma" | "sat" | "luma*sat"`` — hand-free derivations. ``sat`` is
+  the color-saturation (max-min/max) channel percentile-stretched; ``luma*sat``
+  requires both. These separate subject from background when the *background*
+  is the bright or the vivid part.
 - ``invert``: luminance inverted (lights the card's dark line-art/features).
 - ``mask``: paint your own glow/silhouette over the card image and use that --
-  the way to get a true silhouette when the art has no bright-subject /
-  dark-background separation.
+  always wins, overriding every automatic mode.
 
 Output
 ------
 A Go source file (package ``cartridge``) defining ``var cards = []CardAsset{...}``
 (the default), or, with ``--format json``, the same assets as JSON for the host
-simulator (``cmd/simui``) to load at runtime. The generated Go file is gitignored
-and rebuilt by ``make`` (see the Makefile).
+simulator (``cmd/simui``) to load at runtime. Each asset also carries an
+``ambient`` RGB triple — the background wash tint used by the render to keep
+the unlit card dim and separate from the subject. The generated Go file is
+gitignored and rebuilt by ``make`` (see the Makefile).
 """
 
 from __future__ import annotations
@@ -69,6 +81,7 @@ class Asset:
     height: int
     mask: bytes  # width*height 4-bit values, packed two per byte (high nibble first)
     palette: list[tuple[int, int, int]]  # dark -> bright
+    ambient: tuple[int, int, int] = (0, 0, 0)  # background wash tint
 
 
 def rgb565(r: int, g: int, b: int) -> int:
@@ -172,10 +185,87 @@ def glow_gray(img: Image.Image, gamma: float, floor: float) -> Image.Image:
     return lum.point(lut)
 
 
+def sat_gray(img: Image.Image) -> Image.Image:
+    """Color saturation (max-min)/max per pixel, as an L image."""
+    rgb = img.convert("RGB")
+    s = Image.new("L", rgb.size)
+    s.putdata([
+        0 if mx == 0 else int((mx - mn) * 255 / mx)
+        for mx, mn in ((max(p), min(p)) for p in rgb.getdata())
+    ])
+    return s
+
+
+def percentile_stretch(gray: Image.Image, lo_q: float = 0.02, hi_q: float = 0.98) -> Image.Image:
+    """Percentile contrast stretch, applied after the coarse-grid resize.
+
+    Card art tends to sit in a narrow luma band (p10..p90 can span <50 gray
+    levels), which is what makes the luminance mask read as a flat wash.
+    """
+    vals = sorted(gray.getdata())
+    n = len(vals)
+    lo = vals[int(n * lo_q)]
+    hi = vals[min(n - 1, int(n * hi_q))]
+    if hi <= lo:
+        return gray
+    return gray.point([min(255, max(0, (v - lo) * 255 / (hi - lo))) for v in range(256)])
+
+
+_REMBG_SESSION = None
+# Names of cards whose `subject: auto` fell back to plain luminance, for the
+# end-of-run warning.
+_auto_fallbacks: list[str] = []
+
+
+def subject_matte(art: Image.Image) -> Image.Image | None:
+    """U2-Net saliency matte of the art's subject ('rembg', CPU), or None.
+
+    Returns a grayscale L image, white where the salient subject is. Runs on
+    the art at full art-box resolution (the model downsamples internally), so
+    one call per card regardless of the mask grid.
+    """
+    global _REMBG_SESSION
+    try:
+        from rembg import remove, new_session
+    except ImportError:
+        return None
+    try:
+        if _REMBG_SESSION is None:
+            _REMBG_SESSION = new_session("u2net")
+        m = remove(art, session=_REMBG_SESSION, only_mask=True)
+        return m if m.mode == "L" else m.convert("L")
+    except Exception as e:  # model file unreadable, runtime failure, ...
+        print(f"make_card: rembg failed ({e}); falling back to luminance", file=sys.stderr)
+        return None
+
+
 def load_glow(img: Image.Image, art_box, lcd_window, w: int, h: int,
-              gamma: float, floor: float, invert: bool) -> Image.Image:
-    """Build the coarse glow map from the art's luminance."""
+              gamma: float, floor: float, invert: bool,
+              subject: str | None = None, name: str = "") -> Image.Image:
+    """Build the coarse glow map: luminance, or subject-mode separations."""
     art = crop_window(crop_art(img, art_box), lcd_window)
+    if subject == "auto":
+        matte = subject_matte(art)
+        if matte is not None:
+            lum = percentile_stretch(glow_gray(art, gamma, floor).resize((w, h), Image.BOX))
+            sil = matte.resize((w, h), Image.BOX)
+            out = Image.new("L", (w, h))
+            # Silhouette-gated luminance: the subject keeps its stretched
+            # luminance, the background keeps only a whisper of glow so the
+            # figure/ground split survives the diffusion.
+            out.putdata([(l * int(s) + 8 * (255 - int(s))) // 255
+                         for l, s in zip(lum.getdata(), sil.getdata())])
+            return out
+        _auto_fallbacks.append(name or "card")
+    if subject == "sat":
+        return percentile_stretch(sat_gray(art).resize((w, h), Image.BOX))
+    if subject == "luma*sat":
+        lum = percentile_stretch(glow_gray(art, gamma, floor).resize((w, h), Image.BOX))
+        sat = percentile_stretch(sat_gray(art).resize((w, h), Image.BOX))
+        out = Image.new("L", (w, h))
+        # Geometric-mean-ish combine: needs both channels to light up.
+        out.putdata([min(255, l * s * 2 // (255 * 255) * 184) for l, s in zip(lum.getdata(), sat.getdata())])
+        return out
     gray = glow_gray(art, gamma, floor).resize((w, h), Image.BOX)
     if invert:
         gray = ImageOps.invert(gray)
@@ -260,8 +350,11 @@ def derive_palette(img: Image.Image, coarse: Image.Image, k: int) -> list[tuple[
     vivid = max(bright, key=lambda c: sat(c) * 1.0 + luma(c) / 255.0 * 0.5)
 
     dark = min(clusters, key=luma)
-    dark = tuple(int(v * 0.35) for v in dark)  # unlit card reads as off
-    return [dark, vivid, (255, 255, 255)]  # type: ignore[return-value]
+    dark = tuple(int(v * 0.10) for v in dark)  # unlit card reads as near-off
+    # Ambient = where the unlit card settles: a very dim tint of the vivid
+    # color, so the background wash reads as the card's own palette shadow.
+    ambient = tuple(min(255, int(v * 0.22)) for v in vivid)
+    return [dark, vivid, (255, 255, 255)], ambient  # type: ignore[return-value]
 
 
 # --- asset ------------------------------------------------------------------
@@ -285,7 +378,8 @@ def fitted_window(img_w: int, art_box) -> list[float]:
 
 def build_asset(img: Image.Image, *, art_box, lcd_window, grid, gamma: float,
                 floor: float, invert: bool, mask_path: str | None, palette: int,
-                glow_color, name: str, set_: str, types: list[str], rarity: str) -> Asset:
+                glow_color, subject: str | None, ambient: list[int] | None,
+                name: str, set_: str, types: list[str], rarity: str) -> Asset:
     if lcd_window == "fit":
         lcd_window = fitted_window(img.width, art_box)
     art = crop_window(crop_art(img, art_box), lcd_window)
@@ -293,13 +387,26 @@ def build_asset(img: Image.Image, *, art_box, lcd_window, grid, gamma: float,
     if mask_path:
         coarse = load_mask(mask_path, art_box, lcd_window, w, h)
     else:
-        coarse = load_glow(img, art_box, lcd_window, w, h, gamma, floor, invert)
-    pal = derive_palette(art, coarse, palette)
+        # Default to the automatic subject matte: arbitrary cards get the
+        # figure-on-ground look without per-card config. Explicit subject /
+        # mask entries keep full control; --invert means the user wants plain
+        # inverted luminance, so it bypasses the matte.
+        mode = subject or ("auto" if not invert else None)
+        coarse = load_glow(img, art_box, lcd_window, w, h, gamma, floor, invert,
+                           subject=mode, name=name)
+    # Palette. A painted/user mask wins as-is; sat modes are near-inverted so a
+    # vivid-dominated palette would backfire -- keep the standard ramp for
+    # luminance-ish modes, which is also the fallback's look.
+    pal, pal_ambient = derive_palette(art, coarse, palette)
     if glow_color:
         pal[1] = tuple(glow_color)  # type: ignore[assignment]
+        pal_ambient = tuple(min(255, int(v * 0.22)) for v in glow_color)
+    # Manifest can override the computed ambient tint outright.
+    amb = tuple(max(0, min(255, v)) for v in (ambient if ambient is not None else pal_ambient))
     return Asset(
         name=name, set_=set_, types=types, rarity=rarity,
         width=w, height=h, mask=pack_4bit(quantize_4bit(coarse)), palette=pal,
+        ambient=amb,
     )
 
 
@@ -332,6 +439,7 @@ def render_entry(a: Asset) -> str:
 \t\tPalette: []uint16{{
 \t\t{pal},
 \t\t}},
+\t\tAmbient: RGB565({a.ambient[0]}, {a.ambient[1]}, {a.ambient[2]}),
 \t}},"""
 
 
@@ -373,6 +481,7 @@ def render_json(assets: list[Asset]) -> str:
                 "mask_h": a.height,
                 "mask_b64": base64.b64encode(a.mask).decode("ascii"),
                 "palette": [[r, g, b] for (r, g, b) in a.palette],
+                "ambient": [a.ambient[0], a.ambient[1], a.ambient[2]],
             }
             for a in assets
         ]
@@ -390,6 +499,10 @@ def preview(a: Asset, path: str, w: int = 160, h: int = 128) -> None:
             my = int(y * a.height / h)
             nib = a.mask[(my * a.width + mx) // 2]
             v = (nib >> 4) if ((my * a.width + mx) % 2 == 0) else (nib & 0xF)
+            if v == 0:
+                # Background wash: the ambient tint at the render floor.
+                d.point((x, y), a.ambient)
+                continue
             t = v / 15.0
             pos = t * (len(a.palette) - 1)
             i = min(len(a.palette) - 2, int(pos))
@@ -423,7 +536,8 @@ def sample_asset(args) -> Asset:
         make_sample_art(),
         art_box=None, lcd_window=None, grid=args.grid, gamma=1.0, floor=0.0,
         invert=False, mask_path=None, palette=args.palette,
-        glow_color=None, name="VOLTLET", set_="SAMPLE",
+        glow_color=None, subject=None, ambient=None,
+        name="VOLTLET", set_="SAMPLE",
         types=["Electric"], rarity="COMMON",
     )
 
@@ -451,6 +565,14 @@ def main() -> int:
                     help="paint-your-own glow map in the source image's pixel "
                          "space (alpha channel, else grayscale); used instead of "
                          "the luminance glow")
+    ap.add_argument("--subject", choices=("luma", "sat", "luma*sat", "auto"),
+                    help="subject/background separation: luminance (default), "
+                         "saturation, both, or a U2-Net salient-subject matte "
+                         "(--subject auto; needs the rembg package, degrades "
+                         "to luminance without it)")
+    ap.add_argument("--ambient", type=int, nargs=3, metavar=("R", "G", "B"),
+                    help="override the background wash tint (default: a dim "
+                         "shade of the derived signature color)")
     ap.add_argument("--palette", type=int, default=4, help="palette entries (default 4)")
     ap.add_argument("--glow-color", type=int, nargs=3, metavar=("R", "G", "B"),
                     help="override the signature/glow color (default: most vivid "
@@ -487,6 +609,7 @@ def main() -> int:
                 floor=e.get("floor", args.floor), invert=e.get("invert", args.invert),
                 mask_path=os.path.join(base, mask) if mask else None,
                 palette=e.get("palette", args.palette), glow_color=e.get("glow_color"),
+                subject=e.get("subject", args.subject), ambient=e.get("ambient"),
                 name=e.get("name", "CARD"), set_=e.get("set", ""),
                 types=e.get("types", ["Colorless"]), rarity=e.get("rarity", ""),
             ))
@@ -501,10 +624,17 @@ def main() -> int:
             lcd_window=("fit" if args.lcd_fit else args.lcd_window), grid=args.grid,
             gamma=args.gamma, floor=args.floor, invert=args.invert,
             mask_path=args.mask, palette=args.palette, glow_color=args.glow_color,
+            subject=args.subject, ambient=list(args.ambient) if args.ambient else None,
             name=args.name, set_=args.set_, types=args.types, rarity=args.rarity,
         )]
     else:
         ap.error("provide an image, --sample, or --manifest")
+
+    if _auto_fallbacks:
+        print("make_card: subject=auto fell back to luminance for: "
+              + ", ".join(_auto_fallbacks)
+              + " (install rembg: python3 -m pip install rembg onnxruntime)",
+              file=sys.stderr)
 
     if args.preview:
         preview(assets[0], args.preview)

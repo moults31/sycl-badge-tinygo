@@ -1,6 +1,9 @@
 package cartridge
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // CardAsset is one baked card lightshow asset, produced by tools/make_card.py.
 //
@@ -9,6 +12,9 @@ import "math"
 // first. The palette runs dark -> bright and is interpolated into a 256-entry
 // ramp at Start. Because light diffuses through the card stock, the mask is
 // deliberately small and is bilinearly upscaled on device.
+// Ambient is the very dim RGB wash the background (mask==0) settles at; the
+// generator derives it from the card's signature color so the unlit card reads
+// as "off" instead of a lifted luminance photo.
 type CardAsset struct {
 	Name    string
 	Set     string
@@ -18,6 +24,7 @@ type CardAsset struct {
 	MaskH   int
 	Mask    []byte
 	Palette []uint16
+	Ambient uint16
 }
 
 // nib returns the 4-bit mask value at (x, y); coords must be in range.
@@ -240,14 +247,41 @@ func (c *CardShow) render(p *Platform) {
 	p.Backlight(uint8(bl))
 
 	holo := int(c.t) * 2
+	ambR, ambG, ambB := unpack(c.card.Ambient)
+	// Background drift field, slow and unrelated to the holo sweep speed so
+	// the two layers never move in lockstep.
+	drift := int(c.t) * 120
 
 	for y := 0; y < Height; y++ {
 		// Small-angle rotation as a per-row x shear.
 		sh := (y - Height/2) * c.cal.rot / 64
 		row := y * Width
 		hy := y * 2
+		wash := int(c.sin[(y*5+drift)&255]) >> 5 // 0..7 ambient wobble
 		for x := 0; x < Width; x++ {
 			a := c.sample(x+sh-c.cal.offX, y-c.cal.offY) // 0..15
+
+			if a == 0 {
+				// Background: the dim ambient wash, breathing gently with the
+				// global envelope. A lerp toward black by the breath keeps the
+				// floor visibly *below* the subject at its dimmest.
+				k := 140 + breath*55/255 // 140..195 of 255: keep it clearly dark
+				rr := int(ambR) * k / 255
+				gg := int(ambG) * k / 255
+				bb := (int(ambB) + wash) * k / 255
+				if bb > 63 {
+					bb = 63
+				}
+				if fl > 0 {
+					lift := fl / 4
+					rr = min8(rr+lift, 63)
+					gg = min8(gg+lift, 63)
+					bb = min8(bb+lift, 63)
+				}
+				fb[row+x] = RGB565(uint8(rr), uint8(gg), uint8(bb))
+				continue
+			}
+
 			idx := a * 17
 
 			// Breathing applies to the glow itself.
@@ -259,12 +293,9 @@ func (c *CardShow) render(p *Platform) {
 				idx += (int(c.sin[(x*3+hy+holo)&255]) - 128) / 20
 			}
 
-			// Faint ambient wash so negative space is never pure black.
-			idx += 6
-
-			// Flash lifts everything and adds a moving highlight.
+			// Flash lifts the subject and adds a moving highlight.
 			if fl > 0 {
-				idx += fl / 5
+				idx += fl / 3
 			}
 
 			idx = clampInt(idx, 0, 255)
@@ -363,6 +394,14 @@ func (c *CardShow) drawGuides(p *Platform) {
 	if len(name) > 19 {
 		name = name[:19]
 	}
+	if len(c.list) > 1 {
+		// "3/5" library index, so cycling is legible in the overlay.
+		idx := fmt.Sprintf(" %d/%d", c.idx+1, len(c.list))
+		if len(name)+len(idx) > 19 {
+			name = name[:19-len(idx)]
+		}
+		name += idx
+	}
 	p.drawText(3, Height-10, name, RGB565(0xFF, 0xFF, 0xFF), RGB565(0x10, 0x10, 0x10))
 }
 
@@ -386,4 +425,13 @@ func unpack(v uint16) (uint8, uint8, uint8) {
 	g := uint8((v >> 5) & 0x3F)
 	b := uint8(v & 0x1F)
 	return r << 3, g << 2, b << 3
+}
+
+// min8 is a tiny min for uint8-range ints (no generics here: Go 1.21 min is
+// fine, but the repo keeps to TinyGo-friendly explicit helpers).
+func min8(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -402,6 +402,7 @@ type cardDoc struct {
 		MaskH   int      `json:"mask_h"`
 		MaskB64 string   `json:"mask_b64"`
 		Palette [][3]int `json:"palette"`
+		Ambient []int    `json:"ambient"`
 	} `json:"cards"`
 }
 
@@ -421,6 +422,10 @@ func decodeCards(data []byte) ([]cartridge.CardAsset, error) {
 		for i, p := range c.Palette {
 			pal[i] = cartridge.RGB565(uint8(p[0]), uint8(p[1]), uint8(p[2]))
 		}
+		ambient := uint16(0)
+		if len(c.Ambient) == 3 {
+			ambient = cartridge.RGB565(uint8(c.Ambient[0]), uint8(c.Ambient[1]), uint8(c.Ambient[2]))
+		}
 		lib = append(lib, cartridge.CardAsset{
 			Name:    c.Name,
 			Set:     c.Set,
@@ -430,6 +435,7 @@ func decodeCards(data []byte) ([]cartridge.CardAsset, error) {
 			MaskH:   c.MaskH,
 			Mask:    mask,
 			Palette: pal,
+			Ambient: ambient,
 		})
 	}
 	return lib, nil

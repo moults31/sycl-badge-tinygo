@@ -131,7 +131,8 @@ and loads the assets it emits — so dropping a card in and relaunching the sim 
 enough. The banner reports which set was loaded; with no manifest (or no
 Python/Pillow) it falls back to the cards already baked into the binary. The
 firmware still bakes its cards at build time through `make build`/`card-data`, so
-both use one generator.
+both use one generator. In CARD SHOW, **←/→ (or A/D) cycle the loaded cards** —
+Select's overlay shows the current name and `n/total` index.
 
 Extra flags pass through, e.g.
 `make sim-ui SIMUI_FLAGS="-addr 127.0.0.1:8423 -open=false"` or
@@ -176,7 +177,8 @@ art — it drives a coarse, soft **glow mask** derived from the art box, tinted
 by a small palette and animated as breathing, a sweeping holo band, drifting
 sparkles, and an A-button flash. The whole panel's intensity also breathes
 through the backlight PWM. **Left/Right** cycle the baked card library;
-**Select** toggles the alignment overlay; **A** fires the attack flash.
+**Select** toggles the alignment overlay (which shows the card name and its
+`n/total` library index); **A** fires the attack flash.
 
 Because diffusion washes out fine detail, each asset is tiny (a 4-bit mask
 stretched across the panel and bilinearly upscaled). Assets are **generated at
@@ -189,6 +191,25 @@ build time and gitignored** — no card imagery and no derived mask is committed
   [One card library across worktrees](#one-card-library-across-worktrees));
 - otherwise it emits a single **original synthetic sample**, so a fresh clone
   and CI still compile (CI installs Pillow for this).
+
+Masks separate the card's **subject from its background** automatically: by
+default the generator runs a U²-Net saliency matte (`rembg`, CPU) over the art
+box and gates the stretched luminance by that silhouette, so the creature
+glows out of a near-black ambient wash instead of rendering a flat luminance
+photo. Fallbacks, no per-card config needed:
+
+- `rembg`/`onnxruntime` not installed (or the model download fails) → plain
+  stretched luminance, with a `make_card:` warning naming the affected cards;
+- `"subject": "luma" | "sat" | "luma*sat"` in a manifest entry → the manual
+  derivations (`sat` = color-saturation channel, percentile-stretched);
+- `"invert": true` → inverted luminance (line-art look), bypassing the matte;
+- `"mask": "file.png"` → your own painted glow/silhouette, always winning.
+
+The bake also derives an `ambient` tint per card (a dim shade of the
+signature color; overridable via `"ambient": [r, g, b]`). The render keeps
+that wash moving slowly under the subject while breathing it with the global
+envelope, so foreground and background stay separated even as everything
+diffuses.
 
 Source images live under the gitignored shared library. A manifest entry:
 
@@ -214,13 +235,17 @@ Key flags (CLI or manifest fields):
   makes the glow line up 1:1 with the print instead of showing a scaled-down
   picture of the whole art. `"fit"` centres a panel-sized window automatically;
   it is the one measurement the mechanical build will refine.
+- `subject` — `auto` (default: U²-Net matte, see above), `luma`, `sat`, or
+  `luma*sat`; `--subject` is the single-card CLI equivalent.
 - `glow_color: R G B` — override the signature color (a busy card background can
   otherwise dominate the auto-picked color).
+- `ambient: R G B` — override the background wash tint (default: a dim shade of
+  the signature color).
 - `invert` — glow where the art is *dark* (a line-art/negative look that lights
   up a card's outlines and features).
 - `mask: file` — paint your own glow/silhouette over the card image (alpha or
   grayscale) and use it instead of luminance; the way to get a true silhouette
-  when the art has no bright-subject/dark-background separation.
+  when the auto matte picks the wrong region.
 - `gamma`/`floor` — contrast shape of the derived glow.
 
 Calibration is per card and per session (RAM only). The overlay draws the card

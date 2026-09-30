@@ -115,6 +115,7 @@ func testCard(name string, mask []byte) CardAsset {
 		MaskH:   2,
 		Mask:    mask,
 		Palette: []uint16{RGB565(0, 0, 0), RGB565(255, 80, 0), RGB565(255, 255, 255)},
+		Ambient: RGB565(24, 10, 4),
 	}
 }
 
