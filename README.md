@@ -133,7 +133,8 @@ Python/Pillow) it falls back to the cards already baked into the binary. The
 firmware still bakes its cards at build time through `make build`/`card-data`, so
 both use one generator. In CARD SHOW, **left/right (or A/D) cycle the loaded cards**;
 Select's overlay shows the current name and `n/total` index, and the stick
-**click** cycles the output colour mapping (`RGB`/`BGR`/`SWAP16`/`BGR+SWAP16`;
+**click** cycles the output colour mapping (`RGB`/`BGR`/`SWAP16`/`BGR+SWAP16`/
+`HUE`/`OIL`/`FLUX`/`FOIL`/`TINT`/`VIVID`;
 see [Red and blue came out swapped](#red-and-blue-came-out-swapped-on-real-hardware)).
 
 Extra flags pass through, e.g.
@@ -181,8 +182,8 @@ sparkles, and an A-button flash. The whole panel's intensity also breathes
 through the backlight PWM. **Left/Right** cycle the baked card library;
 **Select** toggles the alignment overlay (which shows the card name and its
 `n/total` library index); **A** fires the attack flash; the joystick **Click**
-cycles the output colour mapping (`RGB`, `BGR`, `SWAP16`, `BGR+SWAP16`) with a
-short on-screen label.
+cycles the output colour mapping (`RGB`, `BGR`, `SWAP16`, `BGR+SWAP16`, `HUE`,
+`OIL`, `FLUX`, `FOIL`, `TINT`, `VIVID`) with a short on-screen label.
 
 Because diffusion washes out fine detail, each asset is tiny (a 4-bit mask
 stretched across the panel and bilinearly upscaled). Assets are **generated at
@@ -352,12 +353,40 @@ byte first.)
 
 Because the mapping is the sort of thing a different panel/batch or a
 worktree that predates this fix can get wrong, **CARD SHOW keeps a runtime
-colour-mapping cycle** on the joystick **Click** (unused elsewhere): `RGB`
-(identity, the correct mapping), `BGR` (the pre-fix R/B swap), `SWAP16` (the
-pixel's two bytes swapped), and `BGR+SWAP16`. A short `CMAP ...` label names the
-active mapping, so the correct one can be confirmed on hardware without a
-rebuild. The cycle is applied to the finished frame, so the sim previews exactly
-what each mapping does.
+colour-mapping cycle** on the joystick **Click** (unused elsewhere):
+
+- `RGB` -- identity, the correct mapping;
+- `BGR` -- the pre-fix R/B swap;
+- `SWAP16` -- the pixel's two bytes swapped (the classic endianness look);
+- `BGR+SWAP16` -- both.
+
+Look modes ride the same cycle. `HUE` and the four plasma modes share one
+trick: they move **chroma only**, leaving luminance -- which is what carries
+the artwork's outlines -- untouched, so the card floods with moving colour
+without dissolving into noise (which is what `SWAP16` does).
+
+- `HUE` -- an animated, luminance-preserving hue rotation: each frame is
+  RGB -> YCbCr, the chroma is turned by a slowly advancing angle, and it is
+  converted back. Horsea's blue goes magenta at +120 degrees and Electrode's
+  red goes green.
+- `OIL` -- the same bit-rotation family as `SWAP16`, but rotated 6 bits instead
+  of a full byte, so more high-order edge bits stay in the high-order channels:
+  still an iridescent oil-slick, but the silhouette survives.
+- `FLUX` -- the PLASMA cart's animated field (`cartridge/plasma.go`) rotates
+  each pixel's *own* hue, while saturation and luminance stay the art's. The
+  card keeps its palette relationships and every line, but colour floods across
+  it and moves.
+- `FOIL` -- the plasma tint screen-blended over the frame, weighted by
+  luminance: a holographic sheen that leaves dark lines dark.
+- `TINT` -- the art multiplied by a plasma colour: an animated coloured gel.
+- `VIVID` -- a static saturation/vibrancy boost, no recolour.
+
+`FLUX`, `FOIL` and `TINT` sample the same `buildPlasmaField()` the PLASMA cart
+uses and advance it by two per frame, so they move at the plasma's own rate.
+
+A short `CMAP ...` label names the active mapping, so the correct one can be
+confirmed on hardware without a rebuild. The cycle is applied to the finished
+frame, so the sim previews exactly what each mapping does.
 
 ### CARD SHOW went black on real hardware
 

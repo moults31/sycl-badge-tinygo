@@ -91,6 +91,14 @@ type CardShow struct {
 	// the user cycles it.
 	mapToast uint32
 
+	// plasma is the animated 0..255 field (the same generator as the PLASMA
+	// cart) that drives the FLUX/FOIL/TINT modes. hueM holds a composed
+	// chroma-rotation matrix per field value for FLUX; plasmaHue is the
+	// full-saturation hue table FOIL and TINT sample.
+	plasma    []uint8
+	hueM      [256][3][3]int32
+	plasmaHue [256]uint16
+
 	idx   int
 	calib bool
 	cals  []cardCalib
@@ -110,6 +118,22 @@ const (
 	// cardMapToastFrames is how long the colour-mapping name lingers after a
 	// click cycle (~1.5 s at 60 fps).
 	cardMapToastFrames = 90
+
+	// cardHuePeriodFrames is one full turn of the animated HUE mapping (~6 s
+	// at 60 fps). Slower than the ~3 s breathing envelope so the two never
+	// lock step.
+	cardHuePeriodFrames = 360
+
+	// cardOilRotate is the OIL mapping's bit rotation. swap16 is a full
+	// byte swap (rotate 8); a smaller rotation keeps more of the high-order
+	// edge bits in the high-order channels, so the silhouette survives.
+	cardOilRotate = 6
+
+	// cardVividSat is VIVID's saturation gain, in percent (170 = 1.7x).
+	cardVividSat = 170
+
+	// cardFoilGain scales FOIL's plasma sheen (of 255).
+	cardFoilGain = 140
 )
 
 // cardColorMap selects how CARD SHOW's finished RGB565 frame is mapped onto the
@@ -118,9 +142,19 @@ const (
 // The runtime renders standard RGB565 (R in bits 15..11), which is what the
 // host simulator decodes. The badge's DT018BTFT panel is wired BGR, and
 // display.go sets MADCTL's BGR bit so the two agree -- so colorRGB is correct
-// on both. The rest are kept as a runtime cycle (joystick Click) so a build
-// flashed without the BGR fix, or a panel of the opposite order, can be
-// corrected on the spot, and so the before/after can be compared live.
+// on both.
+//
+// The rest are a runtime cycle (joystick Click). The first four are panel-order
+// fallbacks and bit-rotation look modes; HUE and the four plasma modes move
+// only the chroma, leaving luminance (and therefore the artwork's edges)
+// intact:
+//
+//   - HUE   -- a global luma-preserving hue rotation that spins with time.
+//   - FLUX  -- the plasma field rotates each pixel's own hue; saturation and
+//     luminance stay the art's, so it floods with moving colour but keeps lines.
+//   - FOIL  -- a plasma tint screen-blended by luminance: a holo sheen.
+//   - TINT  -- the art multiplied by a plasma colour: an animated gel.
+//   - VIVID -- a static saturation boost, no recolour.
 type cardColorMap uint8
 
 const (
@@ -128,11 +162,20 @@ const (
 	colorBGR                           // swap red/blue: the pre-BGR-fix appearance
 	colorSwap16                        // swap the pixel's two bytes (endianness)
 	colorBGRSwap16                     // both
+	colorHue                           // animated luma-preserving hue rotation
+	colorOil                           // bit-rotate 6: swap16's silhouette-safe cousin
+	colorFlux                          // plasma rotates the art's own hue
+	colorFoil                          // plasma-tinted holo sheen
+	colorTint                          // plasma colour-gel multiply
+	colorVivid                         // saturation/vibrancy boost
 	colorMapCount
 )
 
 // cardColorNames labels the mapping on the toast shown after a click cycle.
-var cardColorNames = [...]string{"RGB", "BGR", "SWAP16", "BGR+SWAP16"}
+var cardColorNames = [...]string{
+	"RGB", "BGR", "SWAP16", "BGR+SWAP16", "HUE", "OIL",
+	"FLUX", "FOIL", "TINT", "VIVID",
+}
 
 // NewCardShow returns the card lightshow cartridge using the baked library.
 func NewCardShow() Cartridge { return &CardShow{} }
@@ -163,6 +206,18 @@ func (c *CardShow) Start(p *Platform) {
 	for i := 0; i < 256; i++ {
 		c.sin[i] = uint8((math.Sin(float64(i)*2*math.Pi/256) + 1) * 127.5)
 	}
+
+	// Plasma-driven modes: the field is the PLASMA cart's generator, built
+	// once and advanced per frame. hueM[field] is the chroma-rotation matrix
+	// with that field value as the angle (for FLUX); plasmaHue[field] is the
+	// full-saturation colour it maps to (for FOIL/TINT).
+	c.plasma = buildPlasmaField()
+	c.hueM = buildHueMatrices(c.sin)
+	for i := 0; i < 256; i++ {
+		r, g, b := hsv2rgb(float64(i)*360.0/256.0, 1, 1)
+		c.plasmaHue[i] = RGB565(uint8(r*255), uint8(g*255), uint8(b*255))
+	}
+
 	if len(c.list) > 0 {
 		c.loadCard()
 	}
@@ -220,6 +275,12 @@ func (c *CardShow) buildRamp() {
 // Update implements Cartridge.
 func (c *CardShow) Update(p *Platform) {
 	c.t++
+
+	// Advance the plasma field by two, exactly like the PLASMA cart, so the
+	// plasma-driven colour modes move at the plasma's own rate.
+	for i := range c.plasma {
+		c.plasma[i] += 2
+	}
 
 	if pressed(p.buttons.Select, p.prev.Select) {
 		c.calib = !c.calib
@@ -385,7 +446,7 @@ func (c *CardShow) render(p *Platform) {
 
 	// Apply the selected colour mapping last, so it also covers the sparks and
 	// the overlay: the user sees exactly what the panel will show.
-	applyColorMap(fb, c.colorMap)
+	c.applyColorMap(fb, c.colorMap)
 }
 
 // drawMapToast briefly names the active colour mapping after a click cycle.
@@ -395,8 +456,9 @@ func (c *CardShow) drawMapToast(p *Platform) {
 }
 
 // applyColorMap rewrites every pixel of a finished frame through the selected
-// mapping. The identity case is a no-op.
-func applyColorMap(fb []uint16, m cardColorMap) {
+// mapping. The identity case is a no-op. t is the frame counter, used only by
+// the animated mappings (HUE and the plasma-driven ones).
+func (c *CardShow) applyColorMap(fb []uint16, m cardColorMap) {
 	switch m {
 	case colorBGR:
 		for i, v := range fb {
@@ -404,13 +466,186 @@ func applyColorMap(fb []uint16, m cardColorMap) {
 		}
 	case colorSwap16:
 		for i, v := range fb {
-			fb[i] = v<<8 | v>>8
+			fb[i] = rot16(v, 8)
 		}
 	case colorBGRSwap16:
 		for i, v := range fb {
-			w := swapRB(v)
-			fb[i] = w<<8 | w>>8
+			fb[i] = rot16(swapRB(v), 8)
 		}
+	case colorOil:
+		for i, v := range fb {
+			fb[i] = rot16(v, cardOilRotate)
+		}
+	case colorHue:
+		applyHueRotate(fb, c.t)
+	case colorFlux:
+		c.applyFlux(fb)
+	case colorFoil:
+		c.applyFoil(fb)
+	case colorTint:
+		c.applyTint(fb)
+	case colorVivid:
+		applyVivid(fb)
+	}
+}
+
+// rot16 rotates a 16-bit pixel left by k bits. swap16 is rot16(v, 8); OIL uses
+// a smaller rotation so more high-order (edge) bits stay in the high-order
+// channels and the silhouette survives the shimmer.
+func rot16(v uint16, k uint) uint16 {
+	return v<<k | v>>(16-k)
+}
+
+// --- plasma-driven colour modes -------------------------------------------
+
+// hueMatrices are the fixed RGB -> YCbCr -> rotate -> RGB basis matrices,
+// scaled by 256. mul3 composes out * rotate(angle) * in so a mapping needs one
+// composed matrix per angle instead of a per-pixel conversion.
+var (
+	hueIn = [3][3]float64{
+		{0.299, 0.587, 0.114},
+		{-0.168736, -0.331264, 0.5},
+		{0.5, -0.418688, -0.081312},
+	}
+	hueOut = [3][3]float64{
+		{1, 0, 1.402},
+		{1, -0.344136, -0.714136},
+		{1, 1.772, 0},
+	}
+)
+
+// buildHueMatrices precomputes the composed colour-rotation matrix for a full
+// turn: index i is the angle whose sin is derived from sin[] (i maps to i/256
+// of a turn). FLUX indexes these by the plasma field value directly.
+func buildHueMatrices(sin [256]uint8) [256][3][3]int32 {
+	var m [256][3][3]int32
+	for i := 0; i < 256; i++ {
+		s := (float64(sin[(i+64)&255]) - 127.5) / 127.5 // sin of the angle
+		c := (float64(sin[i]) - 127.5) / 127.5          // cos of the angle
+		rot := [3][3]float64{
+			{1, 0, 0},
+			{0, c, -s},
+			{0, s, c},
+		}
+		mm := mul3(hueOut, mul3(rot, hueIn))
+		for r := 0; r < 3; r++ {
+			for col := 0; col < 3; col++ {
+				m[i][r][col] = int32(math.Round(mm[r][col] * 256))
+			}
+		}
+	}
+	return m
+}
+
+// buildHueMatrix composes the single matrix for an angle of turns*2pi.
+func buildHueMatrix(turns float64) [3][3]int32 {
+	a := 2 * math.Pi * turns
+	c, s := math.Cos(a), math.Sin(a)
+	rot := [3][3]float64{
+		{1, 0, 0},
+		{0, c, -s},
+		{0, s, c},
+	}
+	mm := mul3(hueOut, mul3(rot, hueIn))
+	var m [3][3]int32
+	for r := 0; r < 3; r++ {
+		for col := 0; col < 3; col++ {
+			m[r][col] = int32(math.Round(mm[r][col] * 256))
+		}
+	}
+	return m
+}
+
+// applyHueRotate rotates the chroma of every pixel by a slowly advancing angle
+// while leaving its luminance untouched (RGB -> YCbCr, rotate (Cb,Cr), back).
+// Because Y carries the edges, the shape is preserved exactly; only the hues
+// move, so the whole frame slowly rainbows.
+func applyHueRotate(fb []uint16, t uint32) {
+	m := buildHueMatrix(float64(t%cardHuePeriodFrames) / cardHuePeriodFrames)
+	applyMatrix(fb, m)
+}
+
+// applyMatrix runs every pixel through a composed 3x3 colour matrix (scaled by
+// 256). One integer dot product per output channel.
+func applyMatrix(fb []uint16, m [3][3]int32) {
+	for i, v := range fb {
+		r, g, b := unpackInt(v)
+		fb[i] = RGB565(
+			clamp8(int((r*m[0][0]+g*m[0][1]+b*m[0][2]+128)>>8)),
+			clamp8(int((r*m[1][0]+g*m[1][1]+b*m[1][2]+128)>>8)),
+			clamp8(int((r*m[2][0]+g*m[2][1]+b*m[2][2]+128)>>8)),
+		)
+	}
+}
+
+// mul3 multiplies two 3x3 matrices.
+func mul3(a, b [3][3]float64) [3][3]float64 {
+	var r [3][3]float64
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			r[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + a[i][2]*b[2][j]
+		}
+	}
+	return r
+}
+
+// unpackInt splits an RGB565 pixel into int32 8-bit components for the colour
+// matrix math.
+func unpackInt(v uint16) (int32, int32, int32) {
+	r := int32((v >> 11) & 0x1F)
+	g := int32((v >> 5) & 0x3F)
+	b := int32(v & 0x1F)
+	return r << 3, g << 2, b << 3
+}
+
+// applyFlux rotates each pixel's hue by the plasma field at that point, but
+// leaves its saturation and luminance to the art. Luminance is untouched, so
+// every line and shadow survives while the colour floods and moves.
+func (c *CardShow) applyFlux(fb []uint16) {
+	for i, v := range fb {
+		m := &c.hueM[c.plasma[i]]
+		r, g, b := unpackInt(v)
+		fb[i] = RGB565(
+			clamp8(int((r*m[0][0]+g*m[0][1]+b*m[0][2]+128)>>8)),
+			clamp8(int((r*m[1][0]+g*m[1][1]+b*m[1][2]+128)>>8)),
+			clamp8(int((r*m[2][0]+g*m[2][1]+b*m[2][2]+128)>>8)),
+		)
+	}
+}
+
+// applyFoil screen-blends a full-saturation plasma colour over the frame,
+// weighted by each pixel's own luminance: bright areas catch more of the sheen,
+// dark lines stay dark.
+func (c *CardShow) applyFoil(fb []uint16) {
+	for i, v := range fb {
+		r, g, b := unpackInt(v)
+		y := (299*r + 587*g + 114*b) / 1000
+		pr, pg, pb := unpackInt(c.plasmaHue[c.plasma[i]])
+		k := y * cardFoilGain / 255 / 255
+		fb[i] = RGB565(clamp8(int(r+(255-r)*pr*k/255)),
+			clamp8(int(g+(255-g)*pg*k/255)),
+			clamp8(int(b+(255-b)*pb*k/255)))
+	}
+}
+
+// applyTint multiplies the art by a plasma colour -- an animated colour gel.
+// Multiplicative, so the art's structure is preserved as modulation.
+func (c *CardShow) applyTint(fb []uint16) {
+	for i, v := range fb {
+		r, g, b := unpackInt(v)
+		pr, pg, pb := unpackInt(c.plasmaHue[c.plasma[i]])
+		fb[i] = RGB565(clamp8(int(r*pr/255)), clamp8(int(g*pg/255)), clamp8(int(b*pb/255)))
+	}
+}
+
+// applyVivid pumps saturation (and a little contrast) without recolouring, so
+// the palette brightens but luminance and lines are unchanged.
+func applyVivid(fb []uint16) {
+	for i, v := range fb {
+		r, g, b := unpackInt(v)
+		l := (299*r + 587*g + 114*b) / 1000
+		f := func(c int32) uint8 { return clamp8(int(l + (c-l)*cardVividSat/100)) }
+		fb[i] = RGB565(f(r), f(g), f(b))
 	}
 }
 

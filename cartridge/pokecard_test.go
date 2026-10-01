@@ -211,32 +211,101 @@ func TestSwapRB(t *testing.T) {
 	}
 }
 
+// mapFixture returns a started CardShow with the plasma fields built, for the
+// mappings that need them.
+func mapFixture() *CardShow {
+	c := NewCardShowWith([]CardAsset{testCard("A", []byte{0xF0, 0xFF})}).(*CardShow)
+	c.Start(newCardPlatform())
+	return c
+}
+
 // TestApplyColorMap checks each mapping rewrites the frame as named and that
-// the byte-swap mappings are their own inverse.
+// the bit rotations invert cleanly.
 func TestApplyColorMap(t *testing.T) {
 	red := RGB565(255, 0, 0)
+	c := mapFixture()
 
 	fb := []uint16{red}
-	applyColorMap(fb, colorRGB)
+	c.applyColorMap(fb, colorRGB)
 	if fb[0] != red {
 		t.Fatalf("identity changed the pixel: %04X", fb[0])
 	}
 
-	applyColorMap(fb, colorBGR)
+	fb = []uint16{red}
+	c.applyColorMap(fb, colorBGR)
 	if r, g, b := unpack(fb[0]); r != 0 || g != 0 || b != 248 {
 		t.Fatalf("BGR map: red -> %d,%d,%d, want blue", r, g, b)
 	}
 
-	bgr := fb[0]
-	applyColorMap(fb, colorSwap16)
-	swapped := fb[0]
-	if swapped != bgr<<8|bgr>>8 {
-		t.Fatalf("swap16 map: %04X -> %04X", bgr, swapped)
+	fb = []uint16{red}
+	c.applyColorMap(fb, colorSwap16)
+	if got := rot16(red, 8); fb[0] != got {
+		t.Fatalf("swap16 map: %04X -> %04X, want %04X", red, fb[0], got)
 	}
-	applyColorMap(fb, colorSwap16)
-	if fb[0] != bgr {
-		t.Fatalf("swap16 is not its own inverse: %04X -> %04X", bgr, fb[0])
+
+	fb = []uint16{red}
+	c.applyColorMap(fb, colorOil)
+	oil := fb[0]
+	if oil == red {
+		t.Fatalf("OIL map left %04X unchanged", red)
 	}
+	if oil != rot16(red, cardOilRotate) || rot16(oil, 16-cardOilRotate) != red {
+		t.Fatalf("OIL is not rot16(., %d): %04X -> %04X", cardOilRotate, red, oil)
+	}
+}
+
+// TestHueRotatePreservesLuma checks the hue mapping leaves luminance (which
+// carries the artwork's edges) essentially untouched at every phase. That is
+// the property that keeps the outlines crisp while the colours move.
+func TestHueRotatePreservesLuma(t *testing.T) {
+	cols := [][3]uint8{
+		{128, 128, 128}, {100, 120, 140}, {160, 110, 90}, {90, 140, 150}, {200, 180, 170},
+	}
+	for _, c := range cols {
+		in := RGB565(c[0], c[1], c[2])
+		r0, g0, b0 := unpack(in)
+		before := lum8(r0, g0, b0)
+		for ph := uint32(0); ph < uint32(cardHuePeriodFrames); ph += 53 {
+			fb := []uint16{in}
+			applyHueRotate(fb, ph)
+			r, g, b := unpack(fb[0])
+			if d := absDiff(lum8(r, g, b), before); d > 5 {
+				t.Fatalf("hue changed luma of %v at phase %d by %d (%d -> %d)",
+					c, ph, d, before, lum8(r, g, b))
+			}
+		}
+	}
+}
+
+// TestFluxPreservesLuma checks the plasma FLUX mapping, like HUE, does not
+// change luminance: it only rotates hue, so the card's lines survive the
+// moving colour.
+func TestFluxPreservesLuma(t *testing.T) {
+	c := mapFixture()
+	cols := [][3]uint8{{128, 128, 128}, {160, 110, 90}, {90, 140, 150}}
+	for _, col := range cols {
+		in := RGB565(col[0], col[1], col[2])
+		r0, g0, b0 := unpack(in)
+		before := lum8(r0, g0, b0)
+		fb := []uint16{in}
+		c.applyFlux(fb)
+		r, g, b := unpack(fb[0])
+		if d := absDiff(lum8(r, g, b), before); d > 6 {
+			t.Fatalf("FLUX changed luma of %v by %d (%d -> %d)", col, d, before, lum8(r, g, b))
+		}
+	}
+}
+
+// lum8 is integer Rec.601 luma of 8-bit components.
+func lum8(r, g, b uint8) int {
+	return (299*int(r) + 587*int(g) + 114*int(b)) / 1000
+}
+
+func absDiff(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }
 
 // TestCardShowCyclesColorMap checks the joystick click walks the mapping cycle
@@ -262,7 +331,10 @@ func TestCardShowCyclesColorMap(t *testing.T) {
 		c.Update(p)
 	}
 
-	want := []cardColorMap{colorBGR, colorSwap16, colorBGRSwap16, colorRGB}
+	want := []cardColorMap{
+		colorBGR, colorSwap16, colorBGRSwap16, colorHue, colorOil,
+		colorFlux, colorFoil, colorTint, colorVivid, colorRGB,
+	}
 	for i, w := range want {
 		click()
 		if c.colorMap != w {

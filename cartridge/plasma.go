@@ -27,7 +27,14 @@ func (c *Plasma) Start(p *Platform) {
 		b5 := uint16(b * 31)
 		c.hue[i] = r5<<11 | g6<<5 | b5
 	}
+	copy(c.field[:], buildPlasmaField())
+}
 
+// buildPlasmaField returns the plasma cart's spatial field: four summed sines
+// quantized to 0..255. Both PLASMA and CARD SHOW's plasma-driven colour modes
+// sample it, so there is one generator.
+func buildPlasmaField() []uint8 {
+	field := make([]uint8, Width*Height)
 	for y := 0; y < Height; y++ {
 		fy := float64(y)
 		for x := 0; x < Width; x++ {
@@ -42,9 +49,10 @@ func (c *Plasma) Start(p *Platform) {
 			} else if v > 255 {
 				v = 255
 			}
-			c.field[y*Width+x] = uint8(v)
+			field[y*Width+x] = uint8(v)
 		}
 	}
+	return field
 }
 
 // Update advances the field and repaints the full frame.
