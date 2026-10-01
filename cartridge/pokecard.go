@@ -141,10 +141,11 @@ const (
 	// click cycle (~1.5 s at 60 fps).
 	cardMapToastFrames = 90
 
-	// cardHuePeriodFrames is one full turn of the animated HUE mapping (~6 s
-	// at 60 fps). Slower than the ~3 s breathing envelope so the two never
-	// lock step.
-	cardHuePeriodFrames = 360
+	// cardHuePeriodFrames is one full turn of the animated HUE mapping (~3 s
+	// at 60 fps). NOTE: this now matches the ~3 s breathing envelope, so the
+	// two can beat against each other when BREATHE and HUE are both on; bump
+	// this (or the breath rate) if that becomes distracting.
+	cardHuePeriodFrames = 180
 
 	// cardOilRotate is the OIL mapping's bit rotation. swap16 is a full
 	// byte swap (rotate 8); a smaller rotation keeps more of the high-order
