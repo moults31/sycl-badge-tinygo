@@ -134,7 +134,8 @@ firmware still bakes its cards at build time through `make build`/`card-data`, s
 both use one generator. In CARD SHOW, **left/right (or A/D) cycle the loaded cards**;
 Select's overlay shows the current name and `n/total` index, and the stick
 **click** cycles the output colour mapping (`RGB`/`BGR`/`SWAP16`/`BGR+SWAP16`/
-`HUE`/`OIL`/`FLUX`/`FOIL`/`TINT`/`VIVID`) and **B** toggles breathing;
+`HUE`/`OIL`/`FLUX`/`FOIL`/`TINT`/`VIVID`), **B** toggles breathing, and holding
+**A** opens the effects menu;
 see [Red and blue came out swapped](#red-and-blue-came-out-swapped-on-real-hardware)).
 
 Extra flags pass through, e.g.
@@ -177,22 +178,46 @@ library without moving anything into the repo.
 `CARD SHOW` (`cartridge/pokecard.go`) backlights a physical card laid on the
 LCD. Light diffuses through the card stock, so the show does not reproduce the
 art — it drives a coarse, soft **glow mask** derived from the art box, tinted
-by a small palette and animated as breathing, a sweeping holo band, drifting
-sparkles, and an A-button flash. The whole panel's intensity also breathes
-through the backlight PWM. **Left/Right** cycle the baked card library;
-**Select** toggles the alignment overlay (which shows the card name and its
-`n/total` library index); **A** fires the attack flash; the joystick **Click**
-cycles the output colour mapping (`RGB`, `BGR`, `SWAP16`, `BGR+SWAP16`, `HUE`,
-`OIL`, `FLUX`, `FOIL`, `TINT`, `VIVID`) with a short on-screen label; **B**
-toggles the breathing envelope.
+by a small palette and animated by independent effect layers.
 
-**B** turns the always-on breathing off. It is the one effect that fights some
-of the look modes: `HUE`/`FLUX`/`FOIL`/`TINT` already move colour continuously,
-and stacking a brightness pulse on top muddies them, while `VIVID` is better
-compared against a steady frame. Off means per-pixel breathing holds at full and
-the backlight goes to full and stays there (the boost converter only lights
-predictably at full duty, so a fixed intermediate duty would drift — see the
-backlight notes below).
+**Effects.** Each is a separate on/off layer, and any combination composes (the
+strobe from breathing + holo is fair game):
+
+- **BREATHE** — a ~3 s brightness envelope, per-pixel and through the
+  backlight PWM;
+- **HOLO** — a diagonal brightness sweep across the art;
+- **SPARKLE** — drifting white glints;
+- **flash** — momentary, on the A press edge (not a toggle).
+
+**Colour look.** The finished frame is mapped through one colour mode
+(`RGB`, `BGR`, `SWAP16`, `BGR+SWAP16`, `HUE`, `OIL`, `FLUX`, `FOIL`, `TINT`,
+`VIVID`). The mapping is the *final* post-process, so it also covers the
+effects: the luminance-driven modes (`FOIL`, `TINT`, `VIVID`) therefore read
+the effects' brightness. That is deliberate — it keeps sparkles and holo tinted
+— but it does mean effects and colour are not strictly orthogonal.
+
+**Controls.** **Left/Right** cycle the baked card library; **Select** toggles
+the alignment overlay (joystick nudges the mask, A/B rotate it); **A** taps the
+attack flash and **holding A** opens the effects menu; the joystick **Click**
+cycles the colour mapping; **B** toggles breathing.
+
+**The effects menu** (hold **A**, ~0.4 s) edits every setting with the stick:
+`Up/Down` move the row, `Left/Right` change the value (colour and card wrap,
+booleans toggle), `B` closes. The show keeps rendering behind a dimmed panel so
+a change previews immediately, and the menu is drawn *after* the colour map so
+its text is legible on any look mode. Rows:
+
+```
+COLOUR    FLUX
+CARD      HORSEA
+BREATHE   ON
+HOLO      ON
+SPARKLE   ON
+```
+
+Turning breathing off holds the per-pixel envelope at full and the backlight at
+full (the boost converter only lights predictably at full duty, so a fixed
+intermediate duty would drift — see the backlight notes below).
 
 Because diffusion washes out fine detail, each asset is tiny (a 4-bit mask
 stretched across the panel and bilinearly upscaled). Assets are **generated at

@@ -360,6 +360,143 @@ func TestCardShowTogglesBreathing(t *testing.T) {
 	}
 }
 
+// pressFrame advances one frame with prev cleared, so a single frame of b
+// registers as an edge.
+func pressFrame(c *CardShow, p *Platform, b Buttons) {
+	p.prev = p.buttons
+	p.buttons = b
+	c.Update(p)
+}
+
+// TestCardShowMenuOpensOnHold checks that holding A opens the menu (and does
+// not leave a flash running), while a tap leaves the menu closed and flashes.
+func TestCardShowMenuOpensOnHold(t *testing.T) {
+	p := newCardPlatform()
+	c := NewCardShowWith([]CardAsset{testCard("A", []byte{0xF0, 0xFF})}).(*CardShow)
+	c.Start(p)
+
+	// Tap: flash, no menu.
+	pressFrame(c, p, Buttons{A: true})
+	if !c.menu && c.flash == 0 {
+		t.Fatal("a tap left neither a flash nor a menu")
+	}
+	pressFrame(c, p, Buttons{})
+	if c.menu {
+		t.Fatal("a tap opened the menu")
+	}
+
+	// Hold past the threshold: menu opens, flash is cancelled.
+	pressFrame(c, p, Buttons{A: true})
+	for i := 0; i < int(cardMenuHoldFrames)+1; i++ {
+		pressFrame(c, p, Buttons{A: true})
+	}
+	if !c.menu {
+		t.Fatalf("holding A for %d frames did not open the menu", cardMenuHoldFrames)
+	}
+	if c.flash != 0 {
+		t.Fatalf("menu opened with a flash still pending (%d)", c.flash)
+	}
+}
+
+// TestCardShowMenuEditsEffects drives the menu with buttons and checks the
+// focused row changes value, and that B closes it.
+func TestCardShowMenuEditsEffects(t *testing.T) {
+	p := newCardPlatform()
+	c := NewCardShowWith([]CardAsset{
+		testCard("A", []byte{0xF0, 0xFF}),
+		testCard("B", []byte{0x0F, 0x00}),
+	}).(*CardShow)
+	c.Start(p)
+
+	// Open the menu directly (the hold gesture is covered above).
+	c.menu = true
+	c.menuRow = int(rowColour)
+	start := c.colorMap
+
+	// Right on COLOUR advances the mapping, Left backs it up.
+	pressFrame(c, p, Buttons{Right: true})
+	pressFrame(c, p, Buttons{})
+	if c.colorMap != (start+1)%colorMapCount {
+		t.Fatalf("menu Right: colour = %d, want %d", c.colorMap, (start+1)%colorMapCount)
+	}
+	pressFrame(c, p, Buttons{Left: true})
+	pressFrame(c, p, Buttons{})
+	if c.colorMap != start {
+		t.Fatalf("menu Left: colour = %d, want %d", c.colorMap, start)
+	}
+
+	// Down to CARD and Right cycles the library.
+	pressFrame(c, p, Buttons{Down: true})
+	pressFrame(c, p, Buttons{})
+	if c.menuRow != int(rowCard) {
+		t.Fatalf("Down moved to row %d, want CARD", c.menuRow)
+	}
+	name := c.card.Name
+	pressFrame(c, p, Buttons{Right: true})
+	pressFrame(c, p, Buttons{})
+	if c.card.Name == name {
+		t.Fatal("menu Right on CARD did not change the card")
+	}
+
+	// Down through the boolean rows; A toggles each.
+	for _, row := range []struct {
+		r cardMenuRow
+		v *bool
+	}{{rowBreathe, &c.breathe}, {rowHolo, &c.holo}, {rowSparkle, &c.sparkle}} {
+		pressFrame(c, p, Buttons{Down: true})
+		pressFrame(c, p, Buttons{})
+		if c.menuRow != int(row.r) {
+			t.Fatalf("menu row = %d, want %d", c.menuRow, row.r)
+		}
+		before := *row.v
+		pressFrame(c, p, Buttons{A: true})
+		pressFrame(c, p, Buttons{})
+		if *row.v == before {
+			t.Fatalf("A did not toggle row %d", row.r)
+		}
+	}
+
+	// B closes.
+	pressFrame(c, p, Buttons{B: true})
+	pressFrame(c, p, Buttons{})
+	if c.menu {
+		t.Fatal("B did not close the menu")
+	}
+}
+
+// TestCardShowEffectsAreIndependent checks the three effect layers gate their
+// own contribution to the frame.
+func TestCardShowEffectsAreIndependent(t *testing.T) {
+	p := newCardPlatform()
+	c := NewCardShowWith([]CardAsset{testCard("A", []byte{0xF0, 0xFF})}).(*CardShow)
+
+	// renderAt sets the toggles, renders one frame and returns a copy.
+	renderAt := func(breathe, holo, sparkle bool) []uint16 {
+		c.Start(p)
+		c.breathe, c.holo, c.sparkle = breathe, holo, sparkle
+		c.render(p)
+		return cloneFrame(p)
+	}
+
+	// All on differs from each variant with one layer disabled.
+	all := renderAt(true, true, true)
+	if framesEqual(all, renderAt(false, true, true)) {
+		t.Fatal("disabling BREATHE changed nothing")
+	}
+	if framesEqual(all, renderAt(true, false, true)) {
+		t.Fatal("disabling HOLO changed nothing")
+	}
+	if framesEqual(all, renderAt(true, true, false)) {
+		t.Fatal("disabling SPARKLE changed nothing")
+	}
+
+	// Everything off is a legal, distinct frame (steady art).
+	none := renderAt(false, false, false)
+	if framesEqual(all, none) {
+		t.Fatal("all effects off equals all on")
+	}
+}
+
 func absDiff(a, b int) int {
 	if a > b {
 		return a - b

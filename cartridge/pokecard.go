@@ -61,11 +61,13 @@ type cardCalib struct {
 }
 
 // CardShow runs the "shinethrough" lightshow behind the physical card laid on
-// the LCD. It samples the baked glow mask, breathes it, sweeps a holo band
-// across it, adds a type-tinted ambient wash and drifting sparkles, and fires
-// a flash on A. Left/Right cycle the baked library; Select toggles a
-// calibration overlay (joystick nudges the mask, A/B rotate it) for lining the
-// glow up with the printed art; Click cycles the output colour mapping.
+// the LCD. It samples the baked glow mask, animates it with independent effect
+// layers (breathing, a diagonal holo band, drifting sparkles, an A-button
+// flash), and maps the finished frame through a colour look. Left/Right cycle
+// the baked library; Select toggles the alignment overlay (joystick nudges the
+// mask, A/B rotate it) for lining the glow up with the printed art; Click
+// cycles the output colour mapping; B toggles breathing; holding A opens the
+// effects menu.
 type CardShow struct {
 	card CardAsset
 	cal  *cardCalib
@@ -84,10 +86,27 @@ type CardShow struct {
 	flash uint32
 	spks  []spark
 
-	// breathe toggles the always-on breathing envelope (both the per-pixel
-	// dimming and the backlight pulse). Some look modes read better with a
-	// steady, unmodulated image; Click toggles the mapping, B toggles this.
+	// Effect toggles. They are independent: each is a layer that can be on or
+	// off, and any combination composes (the strobe from BREATHE+HOLO is a
+	// feature, not an accident).
+	//
+	//   - breathe  the ~3 s brightness envelope (per-pixel and backlight PWM);
+	//   - holo     the diagonal brightness sweep;
+	//   - sparkle  the drifting white glints.
+	//
+	// Click cycles the colour mapping, B toggles BREATHE, and the menu (A held)
+	// edits all of them.
 	breathe bool
+	holo    bool
+	sparkle bool
+
+	// menu is true while the effects menu is open; the show keeps rendering
+	// behind it so edits preview live.
+	menu bool
+	// menuRow is the focused row (see the cardMenuRow constants).
+	menuRow int
+	// aHeld counts frames A has been down, to tell a flash tap from a menu hold.
+	aHeld uint32
 
 	// colorMap selects how the finished frame is mapped onto the panel's
 	// colour order; Click cycles it (see the cardColorMap constants).
@@ -182,6 +201,28 @@ var cardColorNames = [...]string{
 	"FLUX", "FOIL", "TINT", "VIVID",
 }
 
+// cardMenuRow identifies a row of the effects menu. Rows COLOUR and CARD are
+// single-select (Left/Right cycles the value); BREATHE, HOLO and SPARKLE are
+// booleans (Left/Right or A toggles them).
+type cardMenuRow uint8
+
+const (
+	rowColour cardMenuRow = iota
+	rowCard
+	rowBreathe
+	rowHolo
+	rowSparkle
+	cardMenuRows // count
+)
+
+// cardMenuNames labels each row in the menu.
+var cardMenuNames = [...]string{"COLOUR", "CARD", "BREATHE", "HOLO", "SPARKLE"}
+
+// cardMenuHoldFrames is how long A must be held to open the menu. Below it A
+// is the momentary attack flash (cardFlashFrames); at or above it the menu
+// opens and the flash does not fire (~0.4 s at 60 fps, longer than a tap).
+const cardMenuHoldFrames = 24
+
 // NewCardShow returns the card lightshow cartridge using the baked library.
 func NewCardShow() Cartridge { return &CardShow{} }
 
@@ -202,6 +243,10 @@ func (c *CardShow) Start(p *Platform) {
 	c.colorMap = colorRGB
 	c.mapToast = 0
 	c.breathe = true
+	c.holo = true
+	c.sparkle = true
+	c.menu = false
+	c.menuRow = 0
 
 	c.list = c.library
 	if len(c.list) == 0 {
@@ -288,6 +333,18 @@ func (c *CardShow) Update(p *Platform) {
 		c.plasma[i] += 2
 	}
 
+	if c.menu {
+		c.updateMenu(p)
+		c.render(p)
+		if c.flash > 0 {
+			c.flash--
+		}
+		if c.mapToast > 0 {
+			c.mapToast--
+		}
+		return
+	}
+
 	if pressed(p.buttons.Select, p.prev.Select) {
 		c.calib = !c.calib
 	}
@@ -303,8 +360,24 @@ func (c *CardShow) Update(p *Platform) {
 		c.breathe = !c.breathe
 		c.mapToast = cardMapToastFrames
 	}
+
+	// A opens the effects menu on a hold; a tap is the attack flash. Fire the
+	// flash on the press edge so a tap reacts immediately, then cancel it and
+	// open the menu if A is still down after the hold threshold.
 	if pressed(p.buttons.A, p.prev.A) && !c.calib {
 		c.flash = cardFlashFrames
+		c.aHeld = 0
+	}
+	if !c.calib && p.buttons.A {
+		c.aHeld++
+		if c.aHeld >= cardMenuHoldFrames {
+			c.menu = true
+			c.menuRow = 0
+			c.aHeld = 0
+			c.flash = 0
+		}
+	} else {
+		c.aHeld = 0
 	}
 
 	if c.calib {
@@ -331,7 +404,7 @@ func (c *CardShow) Update(p *Platform) {
 		c.cal.offY = clampInt(c.cal.offY, -48, 48)
 		c.cal.rot = clampInt(c.cal.rot, -8, 8)
 	} else {
-		// Cycle the loaded library.
+		// Cycle the loaded library. The menu handles its own card row.
 		prev := c.idx
 		if pressed(p.buttons.Left, p.prev.Left) && len(c.list) > 0 {
 			c.idx = (c.idx - 1 + len(c.list)) % len(c.list)
@@ -352,6 +425,66 @@ func (c *CardShow) Update(p *Platform) {
 	}
 	if c.mapToast > 0 {
 		c.mapToast--
+	}
+}
+
+// updateMenu handles input while the effects menu is open. Up/Down move the
+// focused row; Left/Right change its value; A toggles a boolean row or the
+// selected row's value; B closes. Card and colour rows wrap.
+func (c *CardShow) updateMenu(p *Platform) {
+	row := cardMenuRow(c.menuRow)
+	if pressed(p.buttons.Up, p.prev.Up) && c.menuRow > 0 {
+		c.menuRow--
+	}
+	if pressed(p.buttons.Down, p.prev.Down) && c.menuRow < int(cardMenuRows)-1 {
+		c.menuRow++
+	}
+
+	dec, inc, toggle := false, false, false
+	if pressed(p.buttons.Left, p.prev.Left) {
+		dec = true
+	}
+	if pressed(p.buttons.Right, p.prev.Right) {
+		inc = true
+	}
+	if pressed(p.buttons.A, p.prev.A) {
+		toggle = true
+	}
+
+	switch row {
+	case rowColour:
+		if dec {
+			c.colorMap = (c.colorMap - 1 + colorMapCount) % colorMapCount
+		}
+		if inc {
+			c.colorMap = (c.colorMap + 1) % colorMapCount
+		}
+	case rowCard:
+		if len(c.list) > 0 && (dec || inc) {
+			if dec {
+				c.idx = (c.idx - 1 + len(c.list)) % len(c.list)
+			} else {
+				c.idx = (c.idx + 1) % len(c.list)
+			}
+			c.flash = 0
+			c.loadCard()
+		}
+	case rowBreathe:
+		if dec || inc || toggle {
+			c.breathe = !c.breathe
+		}
+	case rowHolo:
+		if dec || inc || toggle {
+			c.holo = !c.holo
+		}
+	case rowSparkle:
+		if dec || inc || toggle {
+			c.sparkle = !c.sparkle
+		}
+	}
+
+	if pressed(p.buttons.B, p.prev.B) {
+		c.menu = false
 	}
 }
 
@@ -419,6 +552,9 @@ func (c *CardShow) render(p *Platform) {
 				// global envelope. A lerp toward black by the breath keeps the
 				// floor visibly *below* the subject at its dimmest.
 				k := 140 + breath*55/255 // 140..195 of 255: keep it clearly dark
+				if !c.breathe {
+					k = 195
+				}
 				rr := int(ambR) * k / 255
 				gg := int(ambG) * k / 255
 				bb := (int(ambB) + wash) * k / 255
@@ -442,7 +578,7 @@ func (c *CardShow) render(p *Platform) {
 
 			// Diagonally sweeping holo band. Only tint lit art, not the
 			// unlit negative space, and keep it subtle.
-			if idx > 48 {
+			if c.holo && idx > 48 {
 				idx += (int(c.sin[(x*3+hy+holo)&255]) - 128) / 20
 			}
 
@@ -456,19 +592,110 @@ func (c *CardShow) render(p *Platform) {
 		}
 	}
 
-	c.drawSparks(fb, bf)
+	if c.sparkle {
+		c.drawSparks(fb, bf)
+	}
 
 	if c.calib {
 		c.drawGuides(p)
 	}
 
-	if c.mapToast > 0 {
+	if !c.menu && c.mapToast > 0 {
 		c.drawMapToast(p)
 	}
 
-	// Apply the selected colour mapping last, so it also covers the sparks and
-	// the overlay: the user sees exactly what the panel will show.
+	// Apply the selected colour mapping to the show, so it covers the sparks
+	// and the calibration overlay.
 	c.applyColorMap(fb, c.colorMap)
+
+	// The menu is drawn after the colour map, so its text stays legible no
+	// matter which look mode is active (the show behind it carries the look).
+	if c.menu {
+		c.drawMenu(p)
+	}
+}
+
+// drawMenu overlays the effects menu. The show keeps rendering behind a
+// translucent dark panel, so a row edit is visible immediately. Up/Down move
+// the focus; Left/Right change the value; A toggles; B closes.
+func (c *CardShow) drawMenu(p *Platform) {
+	fb := p.Frame()
+
+	// Dim the whole frame so the menu text reads over any look mode.
+	for i := range fb {
+		r, g, b := unpack(fb[i])
+		fb[i] = RGB565(r/3, g/3, b/3)
+	}
+
+	bg := RGB565(0x08, 0x0C, 0x18)
+	fg := RGB565(0xE0, 0xE8, 0xF0)
+	sel := RGB565(0x30, 0x60, 0xC0)
+	lit := RGB565(0xFF, 0xFF, 0x00)
+	dim := RGB565(0x88, 0x94, 0xA8)
+
+	// Panel: a title bar and one row per menu item. The 8x8 font gives 20
+	// columns across the panel; the panel inner width is 18 columns, so the
+	// label sits at column 0 and the value at column 11 (7 columns for the
+	// longest value, "BGR+SWAP16", which is trimmed to fit).
+	const x0, y0 = 4, 6
+	const labelCol, valueCol = 0, 10
+	p.fillRect(x0, y0, Width-2*x0, 16+int(cardMenuRows)*12, bg)
+	p.drawText(x0, y0+3, "CARD SHOW", fg, bg)
+	p.fillRect(x0, y0+12, Width-2*x0, 1, sel)
+
+	val := func(r cardMenuRow) string {
+		switch r {
+		case rowColour:
+			return cardColorNames[c.colorMap]
+		case rowCard:
+			if len(c.list) == 0 {
+				return "-"
+			}
+			name := c.card.Name
+			if len(name) > 7 {
+				name = name[:7]
+			}
+			return name
+		case rowBreathe:
+			return onOff(c.breathe)
+		case rowHolo:
+			return onOff(c.holo)
+		case rowSparkle:
+			return onOff(c.sparkle)
+		}
+		return ""
+	}
+
+	for i := 0; i < int(cardMenuRows); i++ {
+		y := y0 + 15 + i*12
+		r := cardMenuRow(i)
+		focused := i == c.menuRow
+
+		label := "  " + cardMenuNames[i]
+		v := val(r)
+		if len(v) > 7 {
+			v = v[:7]
+		}
+
+		if focused {
+			p.fillRect(x0, y, Width-2*x0, 10, sel)
+			p.drawText(x0+labelCol*8, y+1, label, lit, sel)
+			p.drawText(x0+valueCol*8, y+1, v, lit, sel)
+			continue
+		}
+		p.drawText(x0+labelCol*8, y+1, label, fg, bg)
+		p.drawText(x0+valueCol*8, y+1, v, dim, bg)
+	}
+
+	p.drawText(x0, y0+15+int(cardMenuRows)*12+2, "UP/DN ROW  B CLOSE", dim, bg)
+}
+
+// onOff renders a boolean menu value.
+func onOff(v bool) string {
+	if v {
+		return "ON"
+	}
+	return "OFF"
 }
 
 // drawMapToast briefly names the active colour mapping and breathing state
@@ -709,8 +936,9 @@ func (c *CardShow) sample(x, y int) int {
 
 // artPixel renders one pixel of an art-mode card: the baked full-vibrance art
 // color, with the same animation effects the mask mode applies to the glow --
-// per-pixel breathing, the diagonal holo band, and the attack-flash lift --
-// applied to the color channels directly (RGB565 channel ranges: 5/6/5 bits).
+// per-pixel breathing, the diagonal holo band (when enabled), and the
+// attack-flash lift -- applied to the color channels directly (RGB565 channel
+// ranges: 5/6/5 bits).
 func (c *CardShow) artPixel(x, y, bf, hy, holo, fl int) uint16 {
 	r00, g00, b00 := c.artAt(x, y)
 
@@ -720,10 +948,12 @@ func (c *CardShow) artPixel(x, y, bf, hy, holo, fl int) uint16 {
 	bb := int(b00) * bf / 255
 
 	// Diagonal holo band, subtle brightness sweep across the art.
-	d := (int(c.sin[(x*3+hy+holo)&255]) - 128) / 24
-	rr += d
-	gg += d
-	bb += d
+	if c.holo {
+		d := (int(c.sin[(x*3+hy+holo)&255]) - 128) / 24
+		rr += d
+		gg += d
+		bb += d
+	}
 
 	// Attack flash lifts everything toward white, like the mask mode.
 	if fl > 0 {
