@@ -403,6 +403,9 @@ type cardDoc struct {
 		MaskB64 string   `json:"mask_b64"`
 		Palette [][3]int `json:"palette"`
 		Ambient []int    `json:"ambient"`
+		ArtW    int      `json:"art_w"`
+		ArtH    int      `json:"art_h"`
+		ArtB64  string   `json:"art_b64"`
 	} `json:"cards"`
 }
 
@@ -414,29 +417,39 @@ func decodeCards(data []byte) ([]cartridge.CardAsset, error) {
 	}
 	lib := make([]cartridge.CardAsset, 0, len(doc.Cards))
 	for _, c := range doc.Cards {
-		mask, err := base64.StdEncoding.DecodeString(c.MaskB64)
-		if err != nil {
-			return nil, fmt.Errorf("card %q: mask: %w", c.Name, err)
+		asset := cartridge.CardAsset{
+			Name:   c.Name,
+			Set:    c.Set,
+			Types:  c.Types,
+			Rarity: c.Rarity,
+			MaskW:  c.MaskW,
+			MaskH:  c.MaskH,
 		}
-		pal := make([]uint16, len(c.Palette))
-		for i, p := range c.Palette {
-			pal[i] = cartridge.RGB565(uint8(p[0]), uint8(p[1]), uint8(p[2]))
+		if c.ArtB64 != "" || c.ArtW > 0 {
+			// Art mode: the packed little-endian RGB565 art image travels as
+			// base64; the immutable string keeps it flash-resident in the
+			// firmware build.
+			raw, err := base64.StdEncoding.DecodeString(c.ArtB64)
+			if err != nil {
+				return nil, fmt.Errorf("card %q: art: %w", c.Name, err)
+			}
+			asset.ArtW, asset.ArtH, asset.Art = c.ArtW, c.ArtH, string(raw)
+		} else {
+			mask, err := base64.StdEncoding.DecodeString(c.MaskB64)
+			if err != nil {
+				return nil, fmt.Errorf("card %q: mask: %w", c.Name, err)
+			}
+			asset.Mask = mask
+			pal := make([]uint16, len(c.Palette))
+			for i, p := range c.Palette {
+				pal[i] = cartridge.RGB565(uint8(p[0]), uint8(p[1]), uint8(p[2]))
+			}
+			asset.Palette = pal
+			if len(c.Ambient) == 3 {
+				asset.Ambient = cartridge.RGB565(uint8(c.Ambient[0]), uint8(c.Ambient[1]), uint8(c.Ambient[2]))
+			}
 		}
-		ambient := uint16(0)
-		if len(c.Ambient) == 3 {
-			ambient = cartridge.RGB565(uint8(c.Ambient[0]), uint8(c.Ambient[1]), uint8(c.Ambient[2]))
-		}
-		lib = append(lib, cartridge.CardAsset{
-			Name:    c.Name,
-			Set:     c.Set,
-			Types:   c.Types,
-			Rarity:  c.Rarity,
-			MaskW:   c.MaskW,
-			MaskH:   c.MaskH,
-			Mask:    mask,
-			Palette: pal,
-			Ambient: ambient,
-		})
+		lib = append(lib, asset)
 	}
 	return lib, nil
 }

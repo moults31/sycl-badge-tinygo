@@ -15,6 +15,12 @@ import (
 // Ambient is the very dim RGB wash the background (mask==0) settles at; the
 // generator derives it from the card's signature color so the unlit card reads
 // as "off" instead of a lifted luminance photo.
+//
+// Art-mode assets carry Art/ArtW/ArtH instead: a full-vibrance RGB565 image of
+// the card's art box, packed little-endian as a Go string so the compiler
+// keeps it in flash rodata (no RAM copy at boot). The runtime renders it
+// directly, playing the animation effects (breathing, holo band, flash,
+// sparkles) on top. Mask and Palette are then unused.
 type CardAsset struct {
 	Name    string
 	Set     string
@@ -25,6 +31,18 @@ type CardAsset struct {
 	Mask    []byte
 	Palette []uint16
 	Ambient uint16
+	ArtW    int
+	ArtH    int
+	Art     string
+}
+
+// artMode reports whether this asset renders from the baked art image.
+func (a *CardAsset) artMode() bool { return len(a.Art) > 0 }
+
+// artPx returns the RGB565 pixel at index i of the packed art (little-endian).
+func (a *CardAsset) artPx(i int) uint16 {
+	s := a.Art
+	return uint16(s[2*i]) | uint16(s[2*i+1])<<8
 }
 
 // nib returns the 4-bit mask value at (x, y); coords must be in range.
@@ -251,6 +269,9 @@ func (c *CardShow) render(p *Platform) {
 	// Background drift field, slow and unrelated to the holo sweep speed so
 	// the two layers never move in lockstep.
 	drift := int(c.t) * 120
+	// Art mode renders the baked full-vibrance image; the effects below are
+	// applied to its color channels instead of the glow mask.
+	artMode := c.card.artMode()
 
 	for y := 0; y < Height; y++ {
 		// Small-angle rotation as a per-row x shear.
@@ -259,6 +280,11 @@ func (c *CardShow) render(p *Platform) {
 		hy := y * 2
 		wash := int(c.sin[(y*5+drift)&255]) >> 5 // 0..7 ambient wobble
 		for x := 0; x < Width; x++ {
+			if artMode {
+				fb[row+x] = c.artPixel(x+sh-c.cal.offX, y-c.cal.offY,
+					bf, hy, holo, fl)
+				continue
+			}
 			a := c.sample(x+sh-c.cal.offX, y-c.cal.offY) // 0..15
 
 			if a == 0 {
@@ -334,6 +360,75 @@ func (c *CardShow) sample(x, y int) int {
 		m01*(256-ax)*ay +
 		m11*ax*ay
 	return v >> 16
+}
+
+// artPixel renders one pixel of an art-mode card: the baked full-vibrance art
+// color, with the same animation effects the mask mode applies to the glow --
+// per-pixel breathing, the diagonal holo band, and the attack-flash lift --
+// applied to the color channels directly (RGB565 channel ranges: 5/6/5 bits).
+func (c *CardShow) artPixel(x, y, bf, hy, holo, fl int) uint16 {
+	r00, g00, b00 := c.artAt(x, y)
+
+	// Breathing dims the whole art (same soft envelope as the mask mode).
+	rr := int(r00) * bf / 255
+	gg := int(g00) * bf / 255
+	bb := int(b00) * bf / 255
+
+	// Diagonal holo band, subtle brightness sweep across the art.
+	d := (int(c.sin[(x*3+hy+holo)&255]) - 128) / 24
+	rr += d
+	gg += d
+	bb += d
+
+	// Attack flash lifts everything toward white, like the mask mode.
+	if fl > 0 {
+		lift := fl / 3
+		rr += lift
+		gg += lift
+		bb += lift
+	}
+
+	return RGB565(clamp8(rr), clamp8(gg), clamp8(bb))
+}
+
+// clamp8 clamps to the 0..255 byte range RGB565 expects.
+func clamp8(v int) uint8 {
+	if v < 0 {
+		return 0
+	}
+	if v > 255 {
+		return 255
+	}
+	return uint8(v)
+}
+
+// artAt bilinearly reads the baked art at panel coords (x, y), stretching it
+// across the full panel; out-of-range coords clamp to the edge.
+func (c *CardShow) artAt(x, y int) (uint8, uint8, uint8) {
+	mx := (x * c.card.ArtW << 8) / Width
+	my := (y * c.card.ArtH << 8) / Height
+
+	ix, ax := mx>>8, mx&0xFF
+	iy, ay := my>>8, my&0xFF
+
+	x0 := clampInt(ix, 0, c.card.ArtW-1)
+	x1 := clampInt(ix+1, 0, c.card.ArtW-1)
+	y0 := clampInt(iy, 0, c.card.ArtH-1)
+	y1 := clampInt(iy+1, 0, c.card.ArtH-1)
+
+	r0, g0, b0 := unpack(c.card.artPx(y0*c.card.ArtW + x0))
+	r1, g1, b1 := unpack(c.card.artPx(y0*c.card.ArtW + x1))
+	r2, g2, b2 := unpack(c.card.artPx(y1*c.card.ArtW + x0))
+	r3, g3, b3 := unpack(c.card.artPx(y1*c.card.ArtW + x1))
+
+	mix := func(a, b int) int { return (a*(256-ax) + b*ax) >> 8 }
+	hr, hg, hb := mix(int(r0), int(r1)), mix(int(g0), int(g1)), mix(int(b0), int(b1))
+	lr, lg, lb := mix(int(r2), int(r3)), mix(int(g2), int(g3)), mix(int(b2), int(b3))
+
+	wy := 256 - ay
+	return uint8((hr*wy + lr*ay) >> 8),
+		uint8((hg*wy + lg*ay) >> 8),
+		uint8((hb*wy + lb*ay) >> 8)
 }
 
 // drawSparks adds slow upward-drifting, twinkling glints over the show.

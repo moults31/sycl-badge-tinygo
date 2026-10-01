@@ -24,7 +24,12 @@ Many cards:    pass --manifest cards.json, a list of entries like
 
 Glow modes (per card)
 ---------------------
-- Default: luminance of the art (backlights where the card is bright).
+- Default: ``art`` -- no mask at all. The asset carries an RGB565 image of the
+  art box at panel resolution, in the card's original colours (a configurable
+  saturation/contrast punch exists via --vibrance, off by default), and the
+  firmware plays its animation effects (breathing, holo band, flash,
+  sparkles, backlight envelope) directly on that image.
+- Plain luminance of the art (backlights where the card is bright).
 - ``subject: "auto"`` -- U2-Net saliency matting (the ``rembg`` package, CPU)
   extracts the subject's silhouette; the mask is that silhouette multiplied by
   the stretched luminance, so the creature glows out of a dark background and
@@ -39,6 +44,10 @@ Glow modes (per card)
 - ``invert``: luminance inverted (lights the card's dark line-art/features).
 - ``mask``: paint your own glow/silhouette over the card image and use that --
   always wins, overriding every automatic mode.
+
+A manifest entry (or CLI flag) selects the mode: ``"mode": "art"`` (the
+default) or a legacy mask mode via ``"mode": "mask"`` and the usual
+subject/invert/mask parameters.
 
 Output
 ------
@@ -60,7 +69,7 @@ import sys
 from dataclasses import dataclass
 from typing import Iterable
 
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 
 # Rec.709 luma weights.
 LUMA = (0.2126, 0.7152, 0.0722)
@@ -79,9 +88,12 @@ class Asset:
     rarity: str
     width: int
     height: int
-    mask: bytes  # width*height 4-bit values, packed two per byte (high nibble first)
-    palette: list[tuple[int, int, int]]  # dark -> bright
-    ambient: tuple[int, int, int] = (0, 0, 0)  # background wash tint
+    mask: bytes | None  # width*height 4-bit values, packed two per byte (high nibble first); None in art mode
+    palette: list[tuple[int, int, int]] | None  # dark -> bright (mask mode only)
+    ambient: tuple[int, int, int] = (0, 0, 0)  # background wash tint (mask mode only)
+    art: list[int] | None = None  # art mode: RGB565 values, row-major, art_w x art_h
+    art_w: int = 0
+    art_h: int = 0
 
 
 def rgb565(r: int, g: int, b: int) -> int:
@@ -376,12 +388,42 @@ def fitted_window(img_w: int, art_box) -> list[float]:
     return [(x0 - l) / aw, (y0 - t) / ah, (x0 - l + wpx) / aw, (y0 - t + hpx) / ah]
 
 
+def vibrance_boost(img: Image.Image, amount: float) -> Image.Image:
+    """Optional saturation/contrast punch; 1.0 is identity (original colors)."""
+    out = ImageEnhance.Color(img).enhance(amount)
+    return ImageEnhance.Contrast(out).enhance(1.0 + (amount - 1.0) * 0.4)
+
+
+def load_art(img: Image.Image, art_box, lcd_window, art_w: int, art_h: int,
+             vibrance: float) -> list[int]:
+    """Bake the full-vibrance art image for 'art' mode: RGB565 list, row-major."""
+    art = crop_window(crop_art(img, art_box), lcd_window)
+    art = vibrance_boost(art.convert("RGB"), vibrance)
+    art = art.resize((art_w, art_h), Image.BILINEAR)
+    return [rgb565(p[0], p[1], p[2]) for p in art.getdata()]
+
+
 def build_asset(img: Image.Image, *, art_box, lcd_window, grid, gamma: float,
                 floor: float, invert: bool, mask_path: str | None, palette: int,
                 glow_color, subject: str | None, ambient: list[int] | None,
+                mode: str = "art", vibrance: float = 1.0,
+                art_size: tuple[int, int] = (160, 128),
                 name: str, set_: str, types: list[str], rarity: str) -> Asset:
     if lcd_window == "fit":
         lcd_window = fitted_window(img.width, art_box)
+    # Explicit subject / mask settings mean legacy mask mode regardless of the
+    # mode flag; otherwise mode decides.
+    if subject or invert or mask_path:
+        mode = "mask"
+    if mode == "art":
+        aw, ah = art_size
+        return Asset(
+            name=name, set_=set_, types=types, rarity=rarity,
+            width=aw, height=ah, mask=None, palette=None,
+            ambient=(0, 0, 0),
+            art=load_art(img, art_box, lcd_window, aw, ah, vibrance),
+            art_w=aw, art_h=ah,
+        )
     art = crop_window(crop_art(img, art_box), lcd_window)
     w, h = grid
     if mask_path:
@@ -425,13 +467,24 @@ def go_strings(ss: list[str]) -> str:
 
 
 def render_entry(a: Asset) -> str:
-    pal = ",\n\t\t".join("RGB565(%d, %d, %d)" % (r, g, b) for (r, g, b) in a.palette)
-    return f"""\t{{
+    head = f"""\t{{
 \t\tName:    {go_strings([a.name])},
 \t\tSet:     {go_strings([a.set_])},
 \t\tTypes:   []string{{{go_strings(a.types)}}},
 \t\tRarity:  {go_strings([a.rarity])},
-\t\tMaskW:   {a.width},
+"""
+    if a.art is not None:
+        raw = bytearray()
+        for v in a.art:
+            raw += int(v).to_bytes(2, "little")
+        lit = '"' + "".join("\\x%02X" % b for b in raw) + '"'
+        return (head +
+                f"\t\tArtW:    {a.art_w},\n"
+                f"\t\tArtH:    {a.art_h},\n"
+                f"\t\tArt:     {lit},\n"
+                "\t},")
+    pal = ",\n\t\t".join("RGB565(%d, %d, %d)" % (r, g, b) for (r, g, b) in a.palette)
+    return head + f"""\t\tMaskW:   {a.width},
 \t\tMaskH:   {a.height},
 \t\tMask: []byte{{
 {go_bytes(a.mask)}
@@ -467,30 +520,52 @@ def render_json(assets: list[Asset]) -> str:
     """The same assets as render_go, as JSON for the host sim.
 
     ``cmd/simui`` loads this at runtime so the interactive sim shows exactly the
-    cards the firmware bakes, without a rebuild. The mask travels as base64 of
-    the same packed 4-bit bytes; the palette as RGB triples.
+    cards the firmware bakes, without a rebuild. Mask-mode cards carry their
+    packed 4-bit mask (base64) and palette; art-mode cards carry the RGB565
+    art image (base64, little-endian uint16).
     """
-    doc = {
-        "cards": [
-            {
-                "name": a.name,
-                "set": a.set_,
-                "types": a.types,
-                "rarity": a.rarity,
+    def entry(a: Asset) -> dict:
+        e = {
+            "name": a.name,
+            "set": a.set_,
+            "types": a.types,
+            "rarity": a.rarity,
+        }
+        if a.art is not None:
+            raw = bytearray()
+            for v in a.art:
+                raw += int(v).to_bytes(2, "little")
+            e.update({
+                "art_w": a.art_w,
+                "art_h": a.art_h,
+                "art_b64": base64.b64encode(bytes(raw)).decode("ascii"),
+            })
+        else:
+            e.update({
                 "mask_w": a.width,
                 "mask_h": a.height,
                 "mask_b64": base64.b64encode(a.mask).decode("ascii"),
                 "palette": [[r, g, b] for (r, g, b) in a.palette],
                 "ambient": [a.ambient[0], a.ambient[1], a.ambient[2]],
-            }
-            for a in assets
-        ]
-    }
+            })
+        return e
+
+    doc = {"cards": [entry(a) for a in assets]}
     return json.dumps(doc, indent=2) + "\n"
 
 
 def preview(a: Asset, path: str, w: int = 160, h: int = 128) -> None:
-    """Write an upscaled, palette-colored view of the mask (sim-scale)."""
+    """Write a sim-scale view of the asset (art image, or palette-colored mask)."""
+    if a.art is not None:
+        img = Image.new("RGB", (a.art_w, a.art_h))
+        img.putdata([(
+            (v >> 11 & 0x1F) << 3,
+            (v >> 5 & 0x3F) << 2,
+            (v & 0x1F) << 3,
+        ) for v in a.art])
+        img = img.resize((w, h), Image.BILINEAR)
+        img.save(path)
+        return
     img = Image.new("RGB", (w, h), (0, 0, 0))
     d = ImageDraw.Draw(img)
     for y in range(h):
@@ -536,7 +611,8 @@ def sample_asset(args) -> Asset:
         make_sample_art(),
         art_box=None, lcd_window=None, grid=args.grid, gamma=1.0, floor=0.0,
         invert=False, mask_path=None, palette=args.palette,
-        glow_color=None, subject=None, ambient=None,
+        glow_color=None, subject=args.subject, ambient=None,
+        mode=args.mode, vibrance=args.vibrance,
         name="VOLTLET", set_="SAMPLE",
         types=["Electric"], rarity="COMMON",
     )
@@ -557,6 +633,10 @@ def main() -> int:
                          "(35.04x28.03 mm of a 63.5 mm card)")
     ap.add_argument("--grid", type=int, nargs=2, default=[40, 32], metavar=("W", "H"),
                     help="coarse mask resolution (default 40 32)")
+    ap.add_argument("--mode", choices=("art", "mask"), default="art",
+                    help="asset mode: 'art' bakes a full-vibrance RGB565 art "
+                         "image (default); 'mask' bakes a legacy 4-bit glow "
+                         "mask via the subject/luminance paths below")
     ap.add_argument("--gamma", type=float, default=1.0, help="glow gamma (default 1.0)")
     ap.add_argument("--floor", type=float, default=0.0, help="black floor 0..1 (default 0.0)")
     ap.add_argument("--invert", action="store_true",
@@ -574,6 +654,8 @@ def main() -> int:
                     help="override the background wash tint (default: a dim "
                          "shade of the derived signature color)")
     ap.add_argument("--palette", type=int, default=4, help="palette entries (default 4)")
+    ap.add_argument("--vibrance", type=float, default=1.0,
+                    help="art-mode saturation boost (default 1.0: original colours)")
     ap.add_argument("--glow-color", type=int, nargs=3, metavar=("R", "G", "B"),
                     help="override the signature/glow color (default: most vivid "
                          "cluster). Useful when a card's background dominates.")
@@ -610,6 +692,7 @@ def main() -> int:
                 mask_path=os.path.join(base, mask) if mask else None,
                 palette=e.get("palette", args.palette), glow_color=e.get("glow_color"),
                 subject=e.get("subject", args.subject), ambient=e.get("ambient"),
+                mode=e.get("mode", args.mode), vibrance=e.get("vibrance", args.vibrance),
                 name=e.get("name", "CARD"), set_=e.get("set", ""),
                 types=e.get("types", ["Colorless"]), rarity=e.get("rarity", ""),
             ))
@@ -625,6 +708,7 @@ def main() -> int:
             gamma=args.gamma, floor=args.floor, invert=args.invert,
             mask_path=args.mask, palette=args.palette, glow_color=args.glow_color,
             subject=args.subject, ambient=list(args.ambient) if args.ambient else None,
+            mode=args.mode, vibrance=args.vibrance,
             name=args.name, set_=args.set_, types=args.types, rarity=args.rarity,
         )]
     else:
