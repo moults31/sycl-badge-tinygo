@@ -214,6 +214,12 @@
         0.0
       ],
       "conservative_radius": 1.625,
+      "keepout_rect": [
+        98.83,
+        76.17,
+        102.08,
+        76.17
+      ],
       "pads": 1,
       "graphic_layers": [
         "Cmts.User",
@@ -234,6 +240,12 @@
         6.5
       ],
       "conservative_radius": 5.963,
+      "keepout_rect": [
+        187.35,
+        72.3,
+        197.35,
+        78.8
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -255,6 +267,12 @@
         6.5
       ],
       "conservative_radius": 5.963,
+      "keepout_rect": [
+        192.285,
+        97.92,
+        198.785,
+        107.92
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -276,6 +294,12 @@
         4.0
       ],
       "conservative_radius": 3.564,
+      "keepout_rect": [
+        148.775,
+        130.225,
+        154.675,
+        134.225
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -297,6 +321,12 @@
         4.0
       ],
       "conservative_radius": 3.564,
+      "keepout_rect": [
+        132.825,
+        130.2,
+        138.725,
+        134.2
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -318,6 +348,12 @@
         1.47
       ],
       "conservative_radius": 1.655,
+      "keepout_rect": [
+        166.765,
+        73.225,
+        169.73,
+        74.695
+      ],
       "pads": 2,
       "graphic_layers": [
         "F.CrtYd",
@@ -339,6 +375,12 @@
         12.891
       ],
       "conservative_radius": 9.115,
+      "keepout_rect": [
+        105.449,
+        117.067,
+        118.34,
+        129.958
+      ],
       "pads": 0,
       "graphic_layers": [
         "F.Cu",
@@ -360,6 +402,12 @@
         0.0
       ],
       "conservative_radius": 1.625,
+      "keepout_rect": [
+        200.68,
+        132.05,
+        203.93,
+        132.05
+      ],
       "pads": 1,
       "graphic_layers": [
         "Cmts.User",
@@ -380,6 +428,12 @@
         6.5
       ],
       "conservative_radius": 5.963,
+      "keepout_rect": [
+        183.745,
+        101.895,
+        190.245,
+        111.895
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -401,6 +455,12 @@
         4.0
       ],
       "conservative_radius": 3.564,
+      "keepout_rect": [
+        164.7,
+        130.225,
+        170.6,
+        134.225
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -422,6 +482,12 @@
         7.9
       ],
       "conservative_radius": 7.873,
+      "keepout_rect": [
+        142.4,
+        97.39,
+        150.3,
+        111.01
+      ],
       "pads": 17,
       "graphic_layers": [
         "F.CrtYd",
@@ -443,6 +509,12 @@
         0.0
       ],
       "conservative_radius": 1.625,
+      "keepout_rect": [
+        98.82,
+        132.08,
+        102.07,
+        132.08
+      ],
       "pads": 1,
       "graphic_layers": [
         "Cmts.User",
@@ -463,6 +535,12 @@
         12.4
       ],
       "conservative_radius": 8.768,
+      "keepout_rect": [
+        104.082,
+        96.529,
+        121.618,
+        114.065
+      ],
       "pads": 12,
       "graphic_layers": [
         "F.Fab"
@@ -482,6 +560,12 @@
         4.0
       ],
       "conservative_radius": 3.564,
+      "keepout_rect": [
+        140.825,
+        130.2,
+        146.725,
+        134.2
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -503,6 +587,12 @@
         0.0
       ],
       "conservative_radius": 1.625,
+      "keepout_rect": [
+        200.71,
+        76.15,
+        203.96,
+        76.15
+      ],
       "pads": 1,
       "graphic_layers": [
         "Cmts.User",
@@ -523,6 +613,12 @@
         4.0
       ],
       "conservative_radius": 3.564,
+      "keepout_rect": [
+        156.75,
+        130.175,
+        162.65,
+        134.175
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
@@ -544,11 +640,3468 @@
         6.5
       ],
       "conservative_radius": 5.963,
+      "keepout_rect": [
+        108.1,
+        72.2,
+        118.1,
+        78.7
+      ],
       "pads": 4,
       "graphic_layers": [
         "F.CrtYd",
         "F.Fab",
         "F.SilkS"
+      ]
+    }
+  ],
+  "back_footprints": [
+    {
+      "ref": "D8",
+      "value": "MBR0540",
+      "footprint": "Diode_SMD:D_SOD-123",
+      "at": [
+        160.7,
+        75.5
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        4.71,
+        2.3
+      ],
+      "conservative_radius": 2.621,
+      "keepout_rect": [
+        159.55,
+        73.145,
+        161.85,
+        77.855
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "D7",
+      "value": "RED",
+      "footprint": "LED_SMD:LED_0402_1005Metric",
+      "at": [
+        145.9522,
+        82.3214
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        2.02,
+        0.94
+      ],
+      "conservative_radius": 1.114,
+      "keepout_rect": [
+        145.482,
+        81.311,
+        146.422,
+        83.331
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R2",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        150.225,
+        96.15
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        149.295,
+        95.68,
+        151.155,
+        96.62
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C37",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        153.475,
+        105.55
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        152.506,
+        104.581,
+        154.444,
+        106.519
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP6",
+      "value": "SolderJumper_2_Open",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        147.450799,
+        109.397802
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        145.801,
+        108.148,
+        149.101,
+        110.648
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R10",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        197.785,
+        104.08915
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        197.315,
+        103.159,
+        198.255,
+        105.019
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C4",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        178.275,
+        83.05
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        177.815,
+        82.14,
+        178.735,
+        83.96
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C2",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        184.725,
+        82.95
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        184.265,
+        82.04,
+        185.185,
+        83.86
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C28",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        160.675,
+        93.95
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        159.706,
+        92.981,
+        161.644,
+        94.919
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP12",
+      "value": "SolderJumper_2_Open",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        183.0466,
+        113.7412
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        181.397,
+        112.491,
+        184.697,
+        114.991
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "TP4",
+      "value": "TestPoint",
+      "footprint": "TestPoint:TestPoint_Pad_D2.0mm",
+      "at": [
+        169.475,
+        89.5
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.5,
+        1.2
+      ],
+      "conservative_radius": 0.96,
+      "keepout_rect": [
+        168.725,
+        88.9,
+        170.225,
+        90.1
+      ],
+      "pads": 1,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "SW1",
+      "value": "BOOT_SEL",
+      "footprint": "Button_Switch_SMD:SW_Push_1P1T_XKB_TS-1187A",
+      "at": [
+        197.5,
+        112.275
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        7.5,
+        5.6
+      ],
+      "conservative_radius": 4.68,
+      "keepout_rect": [
+        193.75,
+        109.475,
+        201.25,
+        115.075
+      ],
+      "pads": 4,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C1",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        166.0625,
+        124.05
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        165.602,
+        123.14,
+        166.523,
+        124.96
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R14",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        188.09595,
+        79.818249
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        187.166,
+        79.348,
+        189.026,
+        80.288
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R13",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        184.745,
+        108.11
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        184.275,
+        107.18,
+        185.215,
+        109.04
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R44",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        158.4236,
+        85.3694
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        157.434,
+        84.379,
+        159.414,
+        86.359
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "D3",
+      "value": "MBR0540",
+      "footprint": "Diode_SMD:D_SOD-123",
+      "at": [
+        141.811998,
+        119.2784
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        4.71,
+        2.3
+      ],
+      "conservative_radius": 2.621,
+      "keepout_rect": [
+        140.662,
+        116.923,
+        142.962,
+        121.633
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP7",
+      "value": "Solder",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        142.538197,
+        111.3282
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        140.888,
+        110.078,
+        144.188,
+        112.578
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C29",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        157.825,
+        96.8
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        156.856,
+        95.831,
+        158.794,
+        97.769
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R25",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        170.7172,
+        109.0168
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        169.727,
+        108.027,
+        171.707,
+        110.007
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R18",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        187.1256,
+        118.1354
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        186.196,
+        117.665,
+        188.056,
+        118.605
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "J3",
+      "value": "Conn_01x03_Socket",
+      "footprint": "Connector_JST:JST_SH_SM03B-SRSS-TB_1x03-1MP_P1.00mm_Horizontal",
+      "at": [
+        100.125,
+        121.35
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        6.8,
+        6.56
+      ],
+      "conservative_radius": 4.724,
+      "keepout_rect": [
+        96.845,
+        117.95,
+        103.405,
+        124.75
+      ],
+      "pads": 5,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R4",
+      "value": "500R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        171.375,
+        130.59
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        170.905,
+        129.66,
+        171.845,
+        131.52
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C32",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        161.125,
+        108.85
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        160.156,
+        107.881,
+        162.094,
+        109.819
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C18",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        187.7098,
+        121.8184
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        186.8,
+        121.358,
+        188.62,
+        122.278
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R12",
+      "value": "180k",
+      "footprint": "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder",
+      "at": [
+        144.732998,
+        113.8428
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        3.3,
+        1.46
+      ],
+      "conservative_radius": 1.804,
+      "keepout_rect": [
+        143.083,
+        113.113,
+        146.383,
+        114.573
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "J2",
+      "value": "I2C Connector",
+      "footprint": "Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal",
+      "at": [
+        202.7466,
+        121.2596
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        7.8,
+        6.56
+      ],
+      "conservative_radius": 5.096,
+      "keepout_rect": [
+        199.467,
+        117.36,
+        206.027,
+        125.16
+      ],
+      "pads": 6,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C21",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        158.525,
+        96.1
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        157.556,
+        95.131,
+        159.494,
+        97.069
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R16",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        171.225,
+        80.05
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        170.295,
+        79.58,
+        172.155,
+        80.52
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C3",
+      "value": "4.7u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        148.45876,
+        116.797984
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        147.999,
+        115.888,
+        148.919,
+        117.708
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C31",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        158.375,
+        107.65
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        157.406,
+        106.681,
+        159.344,
+        108.619
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U1",
+      "value": "USBLC6-2SC6",
+      "footprint": "Package_TO_SOT_SMD:SOT-23-6",
+      "at": [
+        181.39,
+        83.9275
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        4.1,
+        3.54
+      ],
+      "conservative_radius": 2.708,
+      "keepout_rect": [
+        179.62,
+        81.877,
+        183.16,
+        85.977
+      ],
+      "pads": 6,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "SW3",
+      "value": "RESET",
+      "footprint": "Button_Switch_SMD:SW_Push_1P1T_XKB_TS-1187A",
+      "at": [
+        142.105,
+        101.04
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        7.5,
+        5.6
+      ],
+      "conservative_radius": 4.68,
+      "keepout_rect": [
+        138.355,
+        98.24,
+        145.855,
+        103.84
+      ],
+      "pads": 4,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP10",
+      "value": "SolderJumper_2_Open",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        186.398,
+        113.7412
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        184.748,
+        112.491,
+        188.048,
+        114.991
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "TP5",
+      "value": "TestPoint",
+      "footprint": "TestPoint:TestPoint_Pad_D2.0mm",
+      "at": [
+        161.425,
+        126.2
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.5,
+        1.2
+      ],
+      "conservative_radius": 0.96,
+      "keepout_rect": [
+        160.675,
+        125.6,
+        162.175,
+        126.8
+      ],
+      "pads": 1,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R27",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        168.515,
+        76.25
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        167.585,
+        75.78,
+        169.445,
+        76.72
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U10",
+      "value": "TLV9001IDCK",
+      "footprint": "Package_TO_SOT_SMD:SOT-353_SC-70-5",
+      "at": [
+        156.0614,
+        87.0458
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        2.9,
+        2.39
+      ],
+      "conservative_radius": 1.879,
+      "keepout_rect": [
+        154.191,
+        85.176,
+        157.932,
+        88.916
+      ],
+      "pads": 5,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C16",
+      "value": "10u",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "at": [
+        188.2178,
+        123.1392
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        2.96,
+        1.46
+      ],
+      "conservative_radius": 1.65,
+      "keepout_rect": [
+        186.738,
+        122.409,
+        189.698,
+        123.869
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C13",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        198.9112,
+        120.2182
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        198.451,
+        119.308,
+        199.371,
+        121.128
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "IC1",
+      "value": "RP2354B",
+      "footprint": "Package_DFN_QFN:QFN-80-1EP_10x10mm_P0.4mm_EP3.4x3.4mm_ThermalVias",
+      "at": [
+        162.8,
+        101.151686
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        11.54,
+        11.2
+      ],
+      "conservative_radius": 8.041,
+      "keepout_rect": [
+        154.76,
+        93.112,
+        170.84,
+        109.191
+      ],
+      "pads": 116,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C41",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        149.9,
+        84.7
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        148.99,
+        84.24,
+        150.81,
+        85.16
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C38",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        171.075,
+        95.65
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        170.106,
+        94.681,
+        172.044,
+        96.619
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C7",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        137.525,
+        132.2
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        137.065,
+        131.29,
+        137.985,
+        133.11
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C42",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        179.225,
+        93.55
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        178.256,
+        92.581,
+        180.194,
+        94.519
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "J4",
+      "value": "Conn_01x03_Socket",
+      "footprint": "Connector_JST:JST_SH_SM03B-SRSS-TB_1x03-1MP_P1.00mm_Horizontal",
+      "at": [
+        100.125,
+        114.35
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        6.8,
+        6.56
+      ],
+      "conservative_radius": 4.724,
+      "keepout_rect": [
+        96.845,
+        110.95,
+        103.405,
+        117.75
+      ],
+      "pads": 5,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R11",
+      "value": "680k",
+      "footprint": "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder",
+      "at": [
+        141.34676,
+        114.994585
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        3.3,
+        1.46
+      ],
+      "conservative_radius": 1.804,
+      "keepout_rect": [
+        139.697,
+        114.265,
+        142.997,
+        115.725
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R38",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        153.8,
+        80.4
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        153.33,
+        79.47,
+        154.27,
+        81.33
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R34",
+      "value": "1k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        157.425,
+        106.75
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        156.435,
+        105.76,
+        158.415,
+        107.74
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R19",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        180.801,
+        114.9604
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        180.331,
+        114.03,
+        181.271,
+        115.89
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R29",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        148.225,
+        102.1
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        147.755,
+        101.17,
+        148.695,
+        103.03
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U7",
+      "value": "AP2112K-3.3",
+      "footprint": "Package_TO_SOT_SMD:SOT-23-5",
+      "at": [
+        150.06875,
+        80.38125
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        4.1,
+        3.54
+      ],
+      "conservative_radius": 2.708,
+      "keepout_rect": [
+        148.019,
+        78.611,
+        152.119,
+        82.151
+      ],
+      "pads": 5,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP8",
+      "value": "Solder",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        142.533599,
+        108.7374
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        140.884,
+        107.487,
+        144.184,
+        109.987
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R7",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        174.275,
+        78.05
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        173.805,
+        77.12,
+        174.745,
+        78.98
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R21",
+      "value": "100R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        155.975,
+        105.35
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        154.985,
+        104.36,
+        156.965,
+        106.34
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R42",
+      "value": "30R",
+      "footprint": "Resistor_SMD:R_1206_3216Metric",
+      "at": [
+        146.815798,
+        111.8616
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        4.56,
+        2.26
+      ],
+      "conservative_radius": 2.545,
+      "keepout_rect": [
+        144.536,
+        110.732,
+        149.096,
+        112.992
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C30",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        155.175,
+        99.35
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        154.265,
+        98.89,
+        156.085,
+        99.81
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C43",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        158.3982,
+        87.503
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        157.429,
+        86.534,
+        159.367,
+        88.472
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C10",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        153.475,
+        132.2
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        153.015,
+        131.29,
+        153.935,
+        133.11
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C11",
+      "value": "4.7u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        142.517759,
+        116.289985
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        141.608,
+        115.83,
+        143.428,
+        116.75
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R9",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        193.925,
+        81.5
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        192.995,
+        81.03,
+        194.855,
+        81.97
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C34",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        156.8,
+        79.7
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        155.89,
+        79.24,
+        157.71,
+        80.16
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R23",
+      "value": "100R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        154.375,
+        103.75
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        153.385,
+        102.76,
+        155.365,
+        104.74
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "L2",
+      "value": "3.3u",
+      "footprint": "Inductor_SMD:L_APV_ANR252012",
+      "at": [
+        166.936363,
+        92.499163
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        3.0,
+        2.72
+      ],
+      "conservative_radius": 2.025,
+      "keepout_rect": [
+        164.914,
+        90.477,
+        168.959,
+        94.521
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R41",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        160.1534,
+        89.433395
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        159.223,
+        88.963,
+        161.083,
+        89.903
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "D9",
+      "value": "D_Zener_Filled",
+      "footprint": "Diode_SMD:D_SOD-523",
+      "at": [
+        144.995037,
+        109.312816
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        2.51,
+        1.4
+      ],
+      "conservative_radius": 1.437,
+      "keepout_rect": [
+        144.295,
+        108.058,
+        145.695,
+        110.568
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R28",
+      "value": "2K2",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        167.4914,
+        108.6104
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        167.021,
+        107.68,
+        167.961,
+        109.54
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C6",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        174.3,
+        74.4
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        173.84,
+        73.49,
+        174.76,
+        75.31
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U8",
+      "value": "GD25Q16",
+      "footprint": "Package_SO:SOP-8_3.76x4.96mm_P1.27mm",
+      "at": [
+        177.8,
+        96.8
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        7.56,
+        5.46
+      ],
+      "conservative_radius": 4.663,
+      "keepout_rect": [
+        173.197,
+        92.197,
+        182.403,
+        101.403
+      ],
+      "pads": 8,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C27",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        161.375,
+        93.25
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        160.406,
+        92.281,
+        162.344,
+        94.219
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R24",
+      "value": "100R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        153.625,
+        103.0
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        152.635,
+        102.01,
+        154.615,
+        103.99
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R22",
+      "value": "100R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        155.225,
+        104.6
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        154.235,
+        103.61,
+        156.215,
+        105.59
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C23",
+      "value": "4.7u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        156.725,
+        106.05
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        155.756,
+        105.081,
+        157.694,
+        107.019
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R8",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        143.3,
+        79.6
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        142.37,
+        79.13,
+        144.23,
+        80.07
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C8",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        145.525,
+        132.15
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        145.065,
+        131.24,
+        145.985,
+        133.06
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP9",
+      "value": "SolderJumper_2_Open",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        186.3994,
+        116.3066
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        184.749,
+        115.057,
+        188.049,
+        117.557
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R31",
+      "value": "33R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        163.375,
+        92.55
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        162.385,
+        91.56,
+        164.365,
+        93.54
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R6",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        157.9664,
+        112.4204
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        156.976,
+        111.43,
+        158.956,
+        113.41
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C5",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        169.15,
+        120.9375
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        168.24,
+        120.478,
+        170.06,
+        121.397
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R33",
+      "value": "27R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        169.0662,
+        94.7674
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        168.076,
+        93.777,
+        170.056,
+        95.757
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "TP6",
+      "value": "TestPoint",
+      "footprint": "TestPoint:TestPoint_Pad_D2.0mm",
+      "at": [
+        174.2986,
+        123.5964
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.5,
+        1.2
+      ],
+      "conservative_radius": 0.96,
+      "keepout_rect": [
+        173.549,
+        122.996,
+        175.049,
+        124.196
+      ],
+      "pads": 1,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C20",
+      "value": "4.7u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        165.753,
+        93.9658
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        164.784,
+        92.997,
+        166.722,
+        94.935
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R15",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        188.075,
+        80.85
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        187.145,
+        80.38,
+        189.005,
+        81.32
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C25",
+      "value": "15p",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        153.975,
+        107.5
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        153.006,
+        106.531,
+        154.944,
+        108.469
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "TP7",
+      "value": "TestPoint",
+      "footprint": "TestPoint:TestPoint_Pad_D2.0mm",
+      "at": [
+        143.9456,
+        91.1352
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.5,
+        1.2
+      ],
+      "conservative_radius": 0.96,
+      "keepout_rect": [
+        143.196,
+        90.535,
+        144.696,
+        91.735
+      ],
+      "pads": 1,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R39",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        151.575,
+        104.95
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        150.585,
+        103.96,
+        152.565,
+        105.94
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C26",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        167.8216,
+        105.8926
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        166.853,
+        104.924,
+        168.79,
+        106.861
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R1",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        151.725,
+        95.05
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        151.255,
+        94.12,
+        152.195,
+        95.98
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "TP8",
+      "value": "TestPoint",
+      "footprint": "TestPoint:TestPoint_Pad_D2.0mm",
+      "at": [
+        147.7048,
+        98.8314
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.5,
+        1.2
+      ],
+      "conservative_radius": 0.96,
+      "keepout_rect": [
+        146.955,
+        98.231,
+        148.455,
+        99.431
+      ],
+      "pads": 1,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R5",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        160.3286,
+        111.3028
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        159.859,
+        110.373,
+        160.799,
+        112.233
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "TP3",
+      "value": "TestPoint",
+      "footprint": "TestPoint:TestPoint_Pad_D2.0mm",
+      "at": [
+        156.075,
+        126.1
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.5,
+        1.2
+      ],
+      "conservative_radius": 0.96,
+      "keepout_rect": [
+        155.325,
+        125.5,
+        156.825,
+        126.7
+      ],
+      "pads": 1,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C33",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        166.275,
+        108.6
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        165.815,
+        107.69,
+        166.735,
+        109.51
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "D11",
+      "value": "BLUE",
+      "footprint": "LED_SMD:LED_0402_1005Metric",
+      "at": [
+        175.3654,
+        83.5914
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        2.02,
+        0.94
+      ],
+      "conservative_radius": 1.114,
+      "keepout_rect": [
+        174.895,
+        82.581,
+        175.835,
+        84.601
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C12",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        161.425,
+        132.1
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        160.965,
+        131.19,
+        161.885,
+        133.01
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U4",
+      "value": "TPS61041DBVR",
+      "footprint": "TPS61041DBVR:SOT95P280X145-5N",
+      "at": [
+        145.664759,
+        116.315385
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        4.52,
+        3.4
+      ],
+      "conservative_radius": 2.828,
+      "keepout_rect": [
+        143.405,
+        114.615,
+        147.925,
+        118.015
+      ],
+      "pads": 5,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C9",
+      "value": "10p",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder",
+      "at": [
+        141.329398,
+        113.4364
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.3,
+        1.46
+      ],
+      "conservative_radius": 1.804,
+      "keepout_rect": [
+        139.679,
+        112.706,
+        142.979,
+        114.166
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R20",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        170.006,
+        109.728
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        169.016,
+        108.738,
+        170.996,
+        110.718
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "D10",
+      "value": "GREEN",
+      "footprint": "LED_SMD:LED_0402_1005Metric",
+      "at": [
+        167.5168,
+        110.5408
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        2.02,
+        0.94
+      ],
+      "conservative_radius": 1.114,
+      "keepout_rect": [
+        167.047,
+        109.531,
+        167.987,
+        111.551
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C24",
+      "value": "15p",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        157.275,
+        111.7
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        156.306,
+        110.731,
+        158.244,
+        112.669
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U5",
+      "value": "BH-AAA-B5AA005",
+      "footprint": "BH-AAA-B5AA005:BH-AAA-B5AA005",
+      "at": [
+        128.045,
+        121.07
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        54.0,
+        33.5
+      ],
+      "conservative_radius": 31.774,
+      "keepout_rect": [
+        111.295,
+        94.07,
+        144.795,
+        148.07
+      ],
+      "pads": 7,
+      "graphic_layers": [
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "Q2",
+      "value": "Q_PMOS_DGS",
+      "footprint": "Package_TO_SOT_SMD:SOT-23",
+      "at": [
+        160.7,
+        80.0
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        3.86,
+        3.4
+      ],
+      "conservative_radius": 2.572,
+      "keepout_rect": [
+        159.0,
+        78.07,
+        162.4,
+        81.93
+      ],
+      "pads": 3,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C14",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        169.425,
+        132.2
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        168.965,
+        131.29,
+        169.885,
+        133.11
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C36",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        170.075,
+        99.6
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        169.106,
+        98.631,
+        171.044,
+        100.569
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "SW2",
+      "value": "SW_SPDT",
+      "footprint": "Button_Switch_SMD:SW_SPDT_PCM12",
+      "at": [
+        154.9,
+        75.275
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        8.8,
+        5.85
+      ],
+      "conservative_radius": 5.284,
+      "keepout_rect": [
+        150.5,
+        72.35,
+        159.3,
+        78.2
+      ],
+      "pads": 9,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R43",
+      "value": "3K3",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "at": [
+        176.991,
+        83.566
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        2.96,
+        1.46
+      ],
+      "conservative_radius": 1.65,
+      "keepout_rect": [
+        176.261,
+        82.086,
+        177.721,
+        85.046
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R37",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        181.235624,
+        95.560624
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        180.246,
+        94.571,
+        182.226,
+        96.551
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C15",
+      "value": "1u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        168.225,
+        73.95
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        167.315,
+        73.49,
+        169.135,
+        74.41
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R32",
+      "value": "27R",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        168.355,
+        94.0308
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        167.365,
+        93.041,
+        169.345,
+        95.021
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "Y1",
+      "value": "ABM8-272-T3",
+      "footprint": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+      "at": [
+        156.025,
+        109.2
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        4.2,
+        3.5
+      ],
+      "conservative_radius": 2.734,
+      "keepout_rect": [
+        153.303,
+        106.478,
+        158.747,
+        111.922
+      ],
+      "pads": 4,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "L1",
+      "value": "SWPA5020S100MT",
+      "footprint": "Inductor_SMD:L_Sunlord_SWPA5020S",
+      "at": [
+        146.29976,
+        120.938184
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        5.6,
+        5.5
+      ],
+      "conservative_radius": 3.925,
+      "keepout_rect": [
+        143.5,
+        118.188,
+        149.1,
+        123.688
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R40",
+      "value": "66.5k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        160.1508,
+        91.4654
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        159.221,
+        90.995,
+        161.081,
+        91.935
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R35",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        160.7,
+        82.8
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        159.77,
+        82.33,
+        161.63,
+        83.27
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R26",
+      "value": "2K2",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        146.7162,
+        83.9724
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        145.786,
+        83.502,
+        147.646,
+        84.442
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R36",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        156.8,
+        82.8
+      ],
+      "rot_deg": 180.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        155.87,
+        82.33,
+        157.73,
+        83.27
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "JP11",
+      "value": "SolderJumper_2_Open",
+      "footprint": "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",
+      "at": [
+        183.0466,
+        116.3066
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.3,
+        2.5
+      ],
+      "conservative_radius": 2.07,
+      "keepout_rect": [
+        181.397,
+        115.057,
+        184.697,
+        117.557
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Mask",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C39",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        160.1762,
+        90.4494
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        159.266,
+        89.989,
+        161.086,
+        90.909
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U2",
+      "value": "AP2210N-4.0TRG1",
+      "footprint": "Package_TO_SOT_SMD:SOT-23-3",
+      "at": [
+        169.2,
+        124.4375
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        4.1,
+        3.54
+      ],
+      "conservative_radius": 2.708,
+      "keepout_rect": [
+        167.43,
+        122.388,
+        170.97,
+        126.487
+      ],
+      "pads": 3,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R30",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        193.075,
+        110.95
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        192.605,
+        110.02,
+        193.545,
+        111.88
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C35",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        170.0568,
+        104.4194
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        169.088,
+        103.451,
+        171.026,
+        105.388
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "U6",
+      "value": "MAX98357A",
+      "footprint": "Package_DFN_QFN:TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm",
+      "at": [
+        184.2434,
+        121.4779
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        4.55,
+        4.2
+      ],
+      "conservative_radius": 3.096,
+      "keepout_rect": [
+        182.143,
+        119.203,
+        186.343,
+        123.753
+      ],
+      "pads": 21,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C17",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        168.525,
+        77.25
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        167.615,
+        76.79,
+        169.435,
+        77.71
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "J1",
+      "value": "USB_C_Receptacle_USB2.0_16P",
+      "footprint": "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G",
+      "at": [
+        181.58,
+        76.44
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        10.54,
+        8.93
+      ],
+      "conservative_radius": 6.907,
+      "keepout_rect": [
+        176.31,
+        71.975,
+        186.85,
+        80.905
+      ],
+      "pads": 22,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS",
+        "Dwgs.User"
+      ]
+    },
+    {
+      "ref": "R3",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        149.975,
+        98.0
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        149.505,
+        97.07,
+        150.445,
+        98.93
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C22",
+      "value": "4.7u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        164.775,
+        91.15
+      ],
+      "rot_deg": -135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        163.806,
+        90.181,
+        165.744,
+        92.119
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C40",
+      "value": "100n",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        170.199989,
+        95.056011
+      ],
+      "rot_deg": 45.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        169.231,
+        94.087,
+        171.169,
+        96.025
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R17",
+      "value": "10k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        171.225,
+        79.0
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        170.295,
+        78.53,
+        172.155,
+        79.47
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "R45",
+      "value": "100k",
+      "footprint": "Resistor_SMD:R_0402_1005Metric",
+      "at": [
+        157.687,
+        86.106
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.86,
+        0.94
+      ],
+      "conservative_radius": 1.042,
+      "keepout_rect": [
+        156.697,
+        85.116,
+        158.677,
+        87.096
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "C19",
+      "value": "4.7u",
+      "footprint": "Capacitor_SMD:C_0402_1005Metric",
+      "at": [
+        165.053,
+        94.6658
+      ],
+      "rot_deg": 135.0,
+      "local_size": [
+        1.82,
+        0.92
+      ],
+      "conservative_radius": 1.02,
+      "keepout_rect": [
+        164.084,
+        93.697,
+        166.022,
+        95.635
+      ],
+      "pads": 2,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
+      ]
+    },
+    {
+      "ref": "LS1",
+      "value": "CMT-7525-80-SMT-TR",
+      "footprint": "CMT_7525_80_SMT_TR:XDCR_CMT-7525-80-SMT-TR",
+      "at": [
+        184.575,
+        128.35
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        8.45,
+        8.45
+      ],
+      "conservative_radius": 5.975,
+      "keepout_rect": [
+        180.35,
+        124.125,
+        188.8,
+        132.575
+      ],
+      "pads": 4,
+      "graphic_layers": [
+        "B.CrtYd",
+        "B.Fab",
+        "B.SilkS"
       ]
     }
   ],

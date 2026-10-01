@@ -82,8 +82,24 @@ is always safe. To run it outside Fusion, `python3 cad/fusion/build.py --check`
 evaluates the parameter expressions and prints the model-space geometry with no
 CAD involved.
 
-## Rules this directory follows
+## What the build produces
 
+Seven bodies in one document, all regenerated from the tracked text:
+
+| body | what |
+| --- | --- |
+| `BRK_bottom` | back plate on two Ø8 insert bosses at H4/H5, two clamp towers with arms |
+| `BRK_cart_l` / `BRK_cart_r` | swappable cartridges, Ø14 × 2, compliant pad 0.2 mm proud of the rigid rim |
+| `BRK_knob_l` / `BRK_knob_r` | printed thumb knobs, hex pocket gripping the bolt head |
+| `BRK_top` | top bar at H2/H3: bosses, raised bridge, edge hook |
+| `BRK_coupon` | fit-check coupon: six insert-pilot bosses sweeping 4.0–4.5 mm |
+
+`build.py` also runs clearance checks against the extracted board data — nav,
+LED, LCD module, tower/art-box placement, hook capture, bolt-tip depth, and
+bolt-head space against all 128 back-side parts. They run in `--check` and again
+inside Fusion, so they cannot rot.
+
+## Rules this directory follows
 1. **No hand-drawn geometry.** Every edge traces to `parameters.json` or to
    `reference/board.json`. Nothing is dimensioned by eye in the Fusion UI.
 2. **No unnamed numbers in sketches.** Dimensions read parameters.

@@ -50,6 +50,8 @@
       {"name": "active_cy", "expression": "4.25 mm", "status": "verified", "comment": "LCD active-area centre, from board centre"},
       {"name": "active_w", "expression": "34.5 mm", "status": "verified", "comment": "lit active width (measured landscape)"},
       {"name": "active_h", "expression": "27.5 mm", "status": "verified", "comment": "lit active height (measured landscape)"},
+      {"name": "lcd_w", "expression": "45.82 mm", "status": "provisional", "comment": "LCD module outline long axis, driven landscape so it lies along X (datasheet 34.0 x 45.82)"},
+      {"name": "lcd_h", "expression": "34.0 mm", "status": "provisional", "comment": "LCD module outline short axis along Y. The module is a build property: no PCB footprint fixes it, so it is placed concentric with the active area"},
       {"name": "card_cx_plan", "expression": "4.19 mm", "status": "verified", "comment": "sleeved-card centre X: art-centred, then shifted +1.94 off the nav (plan)"},
       {"name": "nav_clearance", "expression": "0.75 mm", "status": "verified", "comment": "extra shift so the sleeve's left edge clears the nav, which otherwise sits flush at 0"},
       {"name": "card_cx", "expression": "card_cx_plan + nav_clearance", "status": "verified", "comment": "sleeved-card centre X, final = 4.94"},
@@ -59,7 +61,9 @@
     "controls": [
       {"name": "nav_top_z", "expression": "8.00 mm", "status": "verified", "comment": "5-way nav top; the only front-side feature above the card plane"},
       {"name": "tact_actuator_z", "expression": "5.00 mm", "status": "verified", "comment": "tact switch actuator height"},
-      {"name": "tact_body_z", "expression": "3.45 mm", "status": "verified", "comment": "tact switch body height"}
+      {"name": "tact_body_z", "expression": "3.45 mm", "status": "verified", "comment": "tact switch body height"},
+      {"name": "led_h", "expression": "1.6 mm", "status": "provisional", "comment": "SK6812MINI height above the board. The repo's neopixel.stp says 0.75, the common part is ~1.6; the conservative value is used so the clearance check has margin"},
+      {"name": "led_clearance", "expression": "0.5 mm", "status": "provisional", "comment": "minimum gap required between the bracket plate's underside and the tallest front part under it"}
     ],
     "fasteners": [
       {"name": "insert_od", "expression": "5.0 mm", "status": "verified", "comment": "M3 heat-set insert barrel OD (Preciva kit)"},
@@ -94,7 +98,28 @@
       {"name": "cartridge_od", "expression": "14.0 mm", "status": "provisional", "comment": "cartridge diameter; loose and swappable, so it needs no socket"},
       {"name": "pad_od", "expression": "6.0 mm", "status": "provisional", "comment": "compliant pad diameter; the pad is the only part that touches the card"},
       {"name": "pad_protrusion", "expression": "0.2 mm", "status": "provisional", "comment": "how far the pad stands below the rigid rim; the rim then bottoms on the card and bounds the squeeze, giving clamp_stop_z"},
-      {"name": "bolt_shank", "expression": "8.0 mm", "status": "verified", "comment": "kit's shortest M3 socket cap; with arm_thk 8.0 the tip lands 0.3 mm above the cartridge"}
+      {"name": "bolt_shank", "expression": "8.0 mm", "status": "verified", "comment": "kit's shortest M3 socket cap; with arm_thk 8.0 the tip lands 0.3 mm above the cartridge"},
+      {"name": "dimple_depth", "expression": "0.6 mm", "status": "provisional", "comment": "centring dimple in the cartridge top for the bolt tip; the bolt is bought, so only the dimple is modelled"},
+      {"name": "knob_od", "expression": "16.0 mm", "status": "provisional", "comment": "printed thumb knob diameter"},
+      {"name": "knob_h", "expression": "8.0 mm", "status": "provisional", "comment": "printed thumb knob height above the arm's top face"},
+      {"name": "knob_pocket_af", "expression": "5.8 mm", "status": "provisional", "comment": "hex pocket across flats, sized to grip the M3 socket-cap head (5.5 across flats)"},
+      {"name": "knob_pocket_depth", "expression": "3.2 mm", "status": "provisional", "comment": "hex pocket depth; the head is 3.0 tall"}
+    ],
+    "top_bar": [
+      {"name": "bridge_clear", "expression": "0.4 mm", "status": "provisional", "comment": "gap from the card plane to the top bridge's underside; the bridge must clear the card AND the START/SELECT actuators, which stand 5.0 mm proud"},
+      {"name": "bridge_thk", "expression": "3.0 mm", "status": "provisional", "comment": "top bridge thickness"},
+      {"name": "bridge_y0", "expression": "25.0 mm", "status": "provisional", "comment": "top bridge inboard edge Y, clear of the LCD module's upper edge at about 27.16"},
+      {"name": "hook_clear", "expression": "0.35 mm", "status": "provisional", "comment": "gap between the card's top edge (33.75) and the hook's inner face"},
+      {"name": "hook_thk", "expression": "2.0 mm", "status": "provisional", "comment": "hook leg thickness along Y"},
+      {"name": "hook_z", "expression": "5.0 mm", "status": "provisional", "comment": "bottom of the hook leg; below the card plane (6.0) so it actually captures the card's top edge"},
+      {"name": "hook_x_l", "expression": "-25.0 mm", "status": "provisional", "comment": "hook leg left edge X"},
+      {"name": "hook_x_r", "expression": "35.0 mm", "status": "provisional", "comment": "hook leg right edge X"}
+    ],
+    "coupon": [
+      {"name": "coupon_x", "expression": "0.0 mm", "status": "provisional", "comment": "coupon centre X; parked clear of the holder so it prints as its own body"},
+      {"name": "coupon_y", "expression": "-95.0 mm", "status": "provisional", "comment": "coupon centre Y, well clear of the holder"},
+      {"name": "coupon_pilot_min", "expression": "4.0 mm", "status": "provisional", "comment": "smallest insert pilot on the coupon sweep"},
+      {"name": "coupon_pilot_step", "expression": "0.1 mm", "status": "provisional", "comment": "pilot sweep step; six bosses cover 4.0 to 4.5 as the plan suggests"}
     ]
   }
 }

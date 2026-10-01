@@ -139,6 +139,21 @@ def _rect_top(cx, top_y, w, h):
     return {"x": (cx - w / 2.0, cx + w / 2.0), "y": (top_y - h, top_y)}
 
 
+def _keepout(fp: dict, m, cx: float, cy: float) -> dict:
+    """A footprint keep-out in model coordinates: both a circle and a rectangle.
+
+    The rectangle is the right primitive for bolt-head space; the circle is kept
+    because it is the conservative one for irregular parts.
+    """
+    x0, y0, x1, y1 = fp["keepout_rect"]
+    return {
+        "ref": fp["ref"], "value": fp["value"], "pads": fp.get("pads", 0),
+        "center": m(fp["at"]), "radius": fp["conservative_radius"],
+        "rect": (min(x0 - cx, x1 - cx), min(cy - y0, cy - y1),
+                 max(x0 - cx, x1 - cx), max(cy - y0, cy - y1)),
+    }
+
+
 def geom(ref: dict, v: dict[str, float]) -> dict:
     """Everything the build draws, in model coordinates (mm)."""
     bb = ref["bbox"]
@@ -166,6 +181,9 @@ def geom(ref: dict, v: dict[str, float]) -> dict:
     }
     active = _crect(v["active_cx"], v["active_cy"], v["active_w"], v["active_h"])
 
+    keepouts = [_keepout(fp, m, cx, cy) for fp in ref.get("front_footprints", [])]
+    back_keepouts = [_keepout(fp, m, cx, cy) for fp in ref.get("back_footprints", [])]
+
     return {
         "origin_kicad": (cx, cy),
         "outline": outline,
@@ -175,6 +193,8 @@ def geom(ref: dict, v: dict[str, float]) -> dict:
         "card": card,
         "art": art,
         "active": active,
+        "front_keepouts": keepouts,
+        "back_keepouts": back_keepouts,
         "z": {"board_face": 0.0, "glass": v["glass_z"], "card_face": v["card_face_z"],
               "clamp_stop": v["clamp_stop_z"]},
     }
@@ -389,6 +409,16 @@ def _extrude(root, sk, operation, distance_mm, name, largest_only=False):
     return feat
 
 
+def _hex(sk, cx, cy, across_flats):
+    """A regular hexagon drawn as six lines; circumradius = across_flats / sqrt(3)."""
+    r = across_flats / math.sqrt(3.0)
+    pts = [(cx + r * math.cos(math.radians(60 * i)),
+            cy + r * math.sin(math.radians(60 * i))) for i in range(6)]
+    lines = sk.sketchCurves.sketchLines
+    for i in range(6):
+        lines.addByTwoPoints(_pt(*pts[i]), _pt(*pts[(i + 1) % 6]))
+
+
 def _clear_holder(root) -> int:
     """Delete the holder's features, then its sketches, then its plane.
 
@@ -418,6 +448,87 @@ def _clear_holder(root) -> int:
     return removed
 
 
+def checks(g: dict, v: dict) -> list[str]:
+    """The clearances the design depends on, as explicit assertions.
+
+    These are the ones that would fail silently otherwise: the model would look
+    right and the part would not fit. They run in --check and again inside
+    Fusion, so they cannot rot.
+    """
+    bad: list[str] = []
+
+    def need(label, ok, detail):
+        if not ok:
+            bad.append(f"{label}: {detail}")
+
+    sleeve_x = g["sleeve"]["x"]
+    art_x = g["art"]["x"]
+
+    nav = next((f for f in g.get("front_keepouts", []) if f["ref"] == "U3"), None)
+    if nav:
+        gap = sleeve_x[0] - (nav["center"][0] + nav["radius"])
+        need("nav clearance", gap >= 0.5,
+             f"sleeve left edge {sleeve_x[0]:.2f} is only {gap:.2f} mm from the nav keep-out")
+
+    plate_under = v["glass_z"] - v["backplate_thk"]
+    need("LED clearance", plate_under - v["led_h"] >= v["led_clearance"],
+         f"plate underside z={plate_under:.2f} leaves {plate_under - v['led_h']:.2f} mm "
+         f"over a {v['led_h']:.2f} mm LED")
+
+    mod_bot = v["active_cy"] - v["lcd_h"] / 2.0
+    need("LCD module clearance", v["bar_y1"] <= mod_bot - 1.0,
+         f"bracket front edge y={v['bar_y1']:.2f} vs module lower edge {mod_bot:.2f}")
+
+    for label, tower_x in (("left", v["tower_x_l"]), ("right", v["tower_x_r"])):
+        clear = (tower_x + v["tower_w"] / 2.0 <= sleeve_x[0]
+                 or tower_x - v["tower_w"] / 2.0 >= sleeve_x[1])
+        need(f"{label} tower clear of card", clear,
+             f"tower x={tower_x:.2f} overlaps the sleeve x {sleeve_x[0]:.2f}..{sleeve_x[1]:.2f}")
+
+    for label, cx in (("left", v["clamp_x_l"]), ("right", v["clamp_x_r"])):
+        need(f"{label} clamp on the sleeve", sleeve_x[0] < cx < sleeve_x[1],
+             f"clamp x={cx:.2f} is off the sleeve")
+        need(f"{label} clamp outside the art box", not (art_x[0] < cx < art_x[1]),
+             f"clamp x={cx:.2f} is inside the art window x {art_x[0]:.2f}..{art_x[1]:.2f}")
+
+    bridge_bot = v["card_face_z"] + v["bridge_clear"]
+    need("bridge clears the tacts", bridge_bot > v["tact_actuator_z"],
+         f"bridge underside {bridge_bot:.2f} vs tact actuator {v['tact_actuator_z']:.2f}")
+
+    need("hook captures the card", v["hook_z"] < v["glass_z"],
+         f"hook bottom z={v['hook_z']:.2f} does not dip below the card plane {v['glass_z']:.2f}")
+    need("hook clears the card edge", v["hook_clear"] > 0.0, "hook_clear must be positive")
+
+    # The bolts pass through from the back, so the head and its spacer need clear
+    # space there. Checked against the rotated footprint rectangles, not the
+    # circles: the AAA holder's circle claims 32 mm of radius and false-alarms.
+    head_r = v["m3_head_d"] / 2.0 + 1.0
+    for h in g["holes"]:
+        hx, hy = h["at"]
+        for k in g.get("back_keepouts", []):
+            x0, y0, x1, y1 = k["rect"]
+            dx = max(x0 - hx, 0.0, hx - x1)
+            dy = max(y0 - hy, 0.0, hy - y1)
+            dist = math.hypot(dx, dy)
+            need(f"bolt head space at {h['ref']}", dist >= head_r,
+                 f"{k['ref']} ({k['value']}) leaves {dist:.2f} mm; the head needs {head_r:.2f}")
+
+    mount_tip = v["bolt_shank"] - v["board_thk"] - v["bolt_spacer"]
+    need("mounting bolt tip stays inside the insert", 0.0 < mount_tip < v["insert_len"],
+         f"tip z={mount_tip:.2f} vs insert 0..{v['insert_len']:.2f} "
+         f"(shank {v['bolt_shank']:.2f}, board {v['board_thk']:.2f}, spacer {v['bolt_spacer']:.2f})")
+
+    arm_top = v["card_face_z"] + v["cartridge_h"] + v["arm_clear"] + v["arm_thk"]
+    cart_top = v["card_face_z"] + v["cartridge_h"]
+    clamp_tip = arm_top - v["bolt_shank"]
+    need("clamp bolt tip does not preload the cartridge", clamp_tip >= cart_top,
+         f"tip z={clamp_tip:.2f} vs cartridge top {cart_top:.2f}")
+    need("clamp bolt reaches through the insert", clamp_tip <= arm_top - v["insert_len"],
+         f"tip z={clamp_tip:.2f} vs insert bottom z={arm_top - v['insert_len']:.2f}")
+
+    return bad
+
+
 def build_holder(root, g: dict, v: dict) -> dict:
     """The bottom bracket: a back plate carried on the two insert bosses.
 
@@ -431,8 +542,6 @@ def build_holder(root, g: dict, v: dict) -> dict:
     half_x = v["board_w"] / 2.0 - v["bar_inset"]
     boss_od = v["insert_od"] + 2.0 * v["boss_wall"]
     boss_h = v["glass_z"] - v["backplate_thk"]
-
-    _clear_holder(root)
 
     # 1. the back plate, on a plane at the boss height, extruded up to the card plane
     plane = _offset_plane(root, PLANE_HOLDER + "plate", boss_h)
@@ -529,10 +638,127 @@ def build_holder(root, g: dict, v: dict) -> dict:
         _extrude(root, sk, FO.CutFeatureOperation, v["pad_protrusion"],
                  BODY_PREFIX + "crelief" + tag + "_cut", largest_only=True)
 
+        # centring dimple for the (bought) bolt tip
+        sk = _fresh_sketch(root, BODY_PREFIX + "cdimple_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "cdimple" + tag,
+                                         cart_top - v["dimple_depth"]))
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            _pt(cx, clamp_y), (v["m3_shank_d"] / 2.0 + 0.1) * CM_PER_MM)
+        _extrude(root, sk, FO.CutFeatureOperation, v["dimple_depth"] + 0.1,
+                 BODY_PREFIX + "cdimple" + tag + "_cut")
+
+    # Printed thumb knobs. A hex pocket grips the bolt head so the knob drives
+    # it; the knob is its own printed part and simply lifts off.
+    for tag, _tw, _a, cx in sides:
+        sk = _fresh_sketch(root, BODY_PREFIX + "knob_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "knob" + tag, arm_top))
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            _pt(cx, clamp_y), (v["knob_od"] / 2.0) * CM_PER_MM)
+        feat = _extrude(root, sk, FO.NewBodyFeatureOperation, v["knob_h"],
+                        BODY_PREFIX + "knob" + tag + "_body")
+        feat.bodies.item(0).name = BODY_PREFIX + "knob_" + tag
+
+        sk = _fresh_sketch(root, BODY_PREFIX + "kpocket_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "kpocket" + tag, arm_top))
+        _hex(sk, cx, clamp_y, v["knob_pocket_af"])
+        _extrude(root, sk, FO.CutFeatureOperation, v["knob_pocket_depth"],
+                 BODY_PREFIX + "kpocket" + tag + "_cut")
+
     return {"body": body.name, "boss_od": boss_od, "boss_h": boss_h,
             "half_x": half_x, "bar_y": plate_y, "arm_bot": arm_bot,
             "arm_top": arm_top, "cart_top": cart_top,
             "cartridges": [BODY_PREFIX + "cart_" + t for t, _tw, _a, _cx in sides]}
+
+
+def build_top_bar(root, g: dict, v: dict) -> dict:
+    """Top bar: bosses at H2/H3, a raised bridge, and an edge hook.
+
+    The bridge rides *above* the card plane rather than resting on it, because
+    START1 and SELECT1 stand 5.0 mm proud -- that is why the top cannot use a
+    back plate the way the bottom does. The hook is the top's registration: the
+    card overhangs the board by ~1.75 mm up here, so there is nothing behind it
+    to clamp against.
+    """
+    from adsk.fusion import FeatureOperations as FO
+
+    hole = {h["ref"]: h for h in g["holes"]}
+    half_x = v["board_w"] / 2.0 - v["bar_inset"]
+    boss_od = v["insert_od"] + 2.0 * v["boss_wall"]
+    bridge_bot = v["card_face_z"] + v["bridge_clear"]
+    bridge_top = bridge_bot + v["bridge_thk"]
+    hook_y0 = v["card_top_y"] + v["hook_clear"]
+    hook_y1 = hook_y0 + v["hook_thk"]
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "tbosses", root.xYConstructionPlane)
+    circles = sk.sketchCurves.sketchCircles
+    for ref in ("H2", "H3"):
+        circles.addByCenterRadius(_pt(*hole[ref]["at"]), (boss_od / 2.0) * CM_PER_MM)
+    feat = _extrude(root, sk, FO.NewBodyFeatureOperation, bridge_bot, BODY_PREFIX + "tbosses_ext")
+    feat.bodies.item(0).name = BODY_PREFIX + "top"
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "bridge",
+                       _offset_plane(root, PLANE_HOLDER + "bridge", bridge_bot))
+    _xy_rect(sk, {"x": (-half_x, half_x), "y": (v["bridge_y0"], hook_y1)})
+    _extrude(root, sk, FO.JoinFeatureOperation, v["bridge_thk"], BODY_PREFIX + "bridge_ext")
+
+    # the hook hangs below the bridge, out past the card's top edge
+    sk = _fresh_sketch(root, BODY_PREFIX + "hook",
+                       _offset_plane(root, PLANE_HOLDER + "hook", v["hook_z"]))
+    _xy_rect(sk, {"x": (v["hook_x_l"], v["hook_x_r"]), "y": (hook_y0, hook_y1)})
+    _extrude(root, sk, FO.JoinFeatureOperation, bridge_top - v["hook_z"], BODY_PREFIX + "hook_ext")
+
+    # blind insert seats, bored up from the board face; 0.8 mm of material left
+    # above them so a bolt tip cannot emerge at the bridge's underside
+    sk = _fresh_sketch(root, BODY_PREFIX + "tpilots", root.xYConstructionPlane)
+    circles = sk.sketchCurves.sketchCircles
+    for ref in ("H2", "H3"):
+        circles.addByCenterRadius(_pt(*hole[ref]["at"]), (v["insert_pilot_d"] / 2.0) * CM_PER_MM)
+    _extrude(root, sk, FO.CutFeatureOperation, v["insert_len"], BODY_PREFIX + "tpilots_cut")
+
+    return {"body": BODY_PREFIX + "top", "boss_od": boss_od, "bridge_bot": bridge_bot,
+            "bridge_top": bridge_top, "hook_y": (hook_y0, hook_y1)}
+
+
+def build_coupon(root, g: dict, v: dict) -> dict:
+    """A fit-check coupon, emitted from the same source as the holder.
+
+    It settles the two numbers the plan says to dial in on hardware before
+    committing the real parts: the PETG insert pilot diameter, and whether the
+    board holes need a light ream for the M3 shank. It is a separate body, so
+    the slicer picks it independently of the holder.
+    """
+    from adsk.fusion import FeatureOperations as FO
+
+    ox, oy = v["coupon_x"], v["coupon_y"]
+    plate_w, plate_d, plate_t = 100.0, 30.0, 3.0
+    boss_od = v["insert_od"] + 2.0 * v["boss_wall"]
+    boss_h = v["insert_len"]            # match the real boss depth
+    n, span = 6, 15.0
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "coupon", root.xYConstructionPlane)
+    _xy_rect(sk, {"x": (ox - plate_w / 2, ox + plate_w / 2),
+                  "y": (oy - plate_d / 2, oy + plate_d / 2)})
+    feat = _extrude(root, sk, FO.NewBodyFeatureOperation, plate_t, BODY_PREFIX + "coupon_ext")
+    feat.bodies.item(0).name = BODY_PREFIX + "coupon"
+
+    xs = [ox - span * (n - 1) / 2.0 + i * span for i in range(n)]
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "coupon_bosses",
+                       _offset_plane(root, PLANE_HOLDER + "coupon", plate_t))
+    circles = sk.sketchCurves.sketchCircles
+    for x in xs:
+        circles.addByCenterRadius(_pt(x, oy), (boss_od / 2.0) * CM_PER_MM)
+    _extrude(root, sk, FO.JoinFeatureOperation, boss_h, BODY_PREFIX + "coupon_bosses_ext")
+
+    pilots = [v["coupon_pilot_min"] + i * v["coupon_pilot_step"] for i in range(n)]
+    sk = _fresh_sketch(root, BODY_PREFIX + "coupon_pilots", root.xYConstructionPlane)
+    circles = sk.sketchCurves.sketchCircles
+    for x, d in zip(xs, pilots):
+        circles.addByCenterRadius(_pt(x, oy), (d / 2.0) * CM_PER_MM)
+    _extrude(root, sk, FO.CutFeatureOperation, plate_t + boss_h + 1.0,
+             BODY_PREFIX + "coupon_pilots_cut")
+
+    return {"body": BODY_PREFIX + "coupon", "pilots": [round(d, 2) for d in pilots]}
 
 
 def export_snapshots(design, root, repo) -> list:
@@ -630,7 +856,12 @@ def run(_ctx):
     print(report(g, vals))
     print()
 
+    cleared = _clear_holder(root)
+    if cleared:
+        print(f"cleared {cleared} previous holder item(s)")
     holder = build_holder(root, g, vals)
+    top = build_top_bar(root, g, vals)
+    coupon = build_coupon(root, g, vals)
     body = root.bRepBodies.itemByName(holder["body"])
     bb = body.boundingBox
     print(f"bottom bracket: {holder['body']}")
@@ -646,6 +877,27 @@ def run(_ctx):
           f"bolt tip z={tip:.2f} (gap {tip - holder['cart_top']:+.2f})")
     print(f"  bodies ({root.bRepBodies.count}): "
           + ", ".join(root.bRepBodies.item(i).name for i in range(root.bRepBodies.count)))
+    tb = root.bRepBodies.itemByName(top["body"])
+    tbb = tb.boundingBox
+    print(f"top bar: {top['body']}")
+    print(f"  bridge z {top['bridge_bot']:.2f}..{top['bridge_top']:.2f}, "
+          f"hook y {top['hook_y'][0]:.2f}..{top['hook_y'][1]:.2f} down to z={vals['hook_z']:.2f}")
+    print(f"  bbox X {tbb.minPoint.x * MM_PER_CM:+.3f} .. {tbb.maxPoint.x * MM_PER_CM:+.3f}  "
+          f"Y {tbb.minPoint.y * MM_PER_CM:+.3f} .. {tbb.maxPoint.y * MM_PER_CM:+.3f}  "
+          f"Z {tbb.minPoint.z * MM_PER_CM:+.3f} .. {tbb.maxPoint.z * MM_PER_CM:+.3f}")
+    print(f"  volume {tb.volume:.3f} cm^3 ({tb.volume * 1000:.0f} mm^3)")
+    cb = root.bRepBodies.itemByName(coupon["body"])
+    print(f"coupon: {coupon['body']} -- insert pilots "
+          + ", ".join(f"D{d}" for d in coupon["pilots"]))
+    print(f"  volume {cb.volume:.3f} cm^3 ({cb.volume * 1000:.0f} mm^3)")
+    print()
+    bad = checks(g, vals)
+    if bad:
+        print(f"WARNING: {len(bad)} clearance check(s) failed:")
+        for b in bad:
+            print(f"  - {b}")
+    else:
+        print("clearance checks: all pass")
     print()
     export_snapshots(design, root, repo)
 
@@ -660,6 +912,14 @@ def main() -> int:
     print(f"parameters: {len(defs)} ({sum(1 for d in defs if 'PROVISIONAL' in d['comment'])} provisional)")
     print()
     print(report(g, vals))
+
+    bad = checks(g, vals)
+    if bad:
+        print(f"\nFAIL: {len(bad)} clearance check(s):", file=sys.stderr)
+        for b in bad:
+            print(f"  - {b}", file=sys.stderr)
+        return 1
+    print("\nclearance checks: all pass")
     return 0
 
 

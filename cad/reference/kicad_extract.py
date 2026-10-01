@@ -154,6 +154,29 @@ def circumradius(a, b, c) -> float:
     return math.hypot(ax - ux, ay - uy)
 
 
+def _world_aabb(at, w, h, rot_deg):
+    """World-space AABB of a footprint's local bounding box, rotation applied.
+
+    A circle through the local bbox is a fine keep-out for a square-ish part but
+    wildly pessimistic for a long thin one (the AAA holder is ~63 mm end to end,
+    so its circle claims 32 mm of radius everywhere). The rotated rectangle is
+    the better primitive for deciding whether a bolt head has room.
+
+    Sign convention: local (x, y) -> world (x0 + x cos t + y sin t,
+    y0 - x sin t + y cos t). Only the AABB is needed, and for the square-ish
+    parts that dominate here the two conventions agree.
+    """
+    t = math.radians(rot_deg)
+    c, s = math.cos(t), math.sin(t)
+    x0, y0 = at
+    xs, ys = [], []
+    for dx in (-w / 2.0, w / 2.0):
+        for dy in (-h / 2.0, h / 2.0):
+            xs.append(x0 + dx * c + dy * s)
+            ys.append(y0 - dx * s + dy * c)
+    return [min(xs), min(ys), max(xs), max(ys)]
+
+
 def footprint_points(fp) -> list[tuple[float, float]]:
     """Every graphic point of a footprint, in footprint-local coordinates."""
     pts: list[tuple[float, float]] = []
@@ -169,19 +192,22 @@ def footprint_points(fp) -> list[tuple[float, float]]:
     return pts
 
 
-def front_footprints(pcb) -> list[dict]:
-    """Front-side (F.Cu) parts, as conservative keep-outs.
+def side_footprints(pcb, layer_name: str) -> list[dict]:
+    """Parts on one board side, as conservative keep-outs.
 
     Rotation is deliberately ignored and each part is reported as a circle that
     contains its whole local bounding box. That over-estimates rather than
     under-estimates, which is the safe direction for a collision check: a part
     it says is clear really is clear. The plan only ever tabulated the six front
-    controls, so anything else on the front face was invisible until now.
+    controls, so everything else was invisible until this existed.
+
+    The back side matters too: the mounting bolts pass through from the back, so
+    their heads and spacers need clear space there.
     """
     out = []
     for fp in kids(pcb, "footprint"):
         layer = kid(fp, "layer")
-        if not layer or layer[1] != "F.Cu":
+        if not layer or layer[1] != layer_name:
             continue
         at = kid(fp, "at")
         pts = footprint_points(fp)
@@ -198,6 +224,8 @@ def front_footprints(pcb) -> list[dict]:
             "rot_deg": f(at[3]) if len(at) > 3 else 0.0,
             "local_size": [round(w, 3), round(h, 3)],
             "conservative_radius": round(math.hypot(w, h) / 2.0, 3),
+            "keepout_rect": [round(x, 3) for x in _world_aabb([f(at[1]), f(at[2])], w, h,
+                                                             f(at[3]) if len(at) > 3 else 0.0)],
             "pads": len(kids(fp, "pad")),
             "graphic_layers": sorted(
                 {kid(g, "layer")[1] for tag in ("fp_line", "fp_rect", "fp_arc", "fp_circle", "fp_poly")
@@ -253,7 +281,8 @@ def extract(pcb) -> dict:
         "bbox": {"x": [min(xs), max(xs)], "y": [min(ys), max(ys)],
                  "w": max(xs) - min(xs), "h": max(ys) - min(ys)},
         "mounting_holes": holes,
-        "front_footprints": front_footprints(pcb),
+        "front_footprints": side_footprints(pcb, "F.Cu"),
+        "back_footprints": side_footprints(pcb, "B.Cu"),
         "derived": {"corner_radii": [round(r, 4) for r in radii],
                     "hole_grid": grid},
     }
@@ -364,7 +393,7 @@ def main() -> int:
         out.write_text(text)
         print(f"wrote {out.relative_to(REPO_ROOT)}  "
               f"({len(doc['outline'])} outline segments, {len(doc['mounting_holes'])} holes, "
-              f"{len(doc['front_footprints'])} front parts, "
+              f"{len(doc['front_footprints'])} front + {len(doc['back_footprints'])} back parts, "
               f"board {doc['bbox']['w']:.3f} x {doc['bbox']['h']:.3f} mm)")
 
     if args.check:

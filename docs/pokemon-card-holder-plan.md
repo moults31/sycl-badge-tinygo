@@ -269,23 +269,42 @@ Art-centred on the active area:
    from the derived values; the active rectangle is at centre (153.66, 99.85).
    In the model, the origin is the board centre with **+Y up** (KiCad's y is
    negated) and z = 0 at the board front face.
-2. **Coupon** — posts, insert pilot (4.0–4.5 mm sweep), cradle, one clamp with
-   both cartridges; verify insert install, bolt fit, clamp force, art-box keep-out.
-3. **Placement** — set the card as computed (art over active, +1.94 mm right shift).
-4. **Model** — bottom bar + clamps, top hook bar, cartridges, stops.
-5. **A/B** — point pad vs. rail on hardware; pick one.
-6. **Full part** — print, install inserts, assemble.
+2. **Coupon** — **emitted** as a separate body from the same build
+   (`BRK_coupon`), so it cannot drift from the holder. Six insert-pilot bosses
+   sweeping 4.0–4.5 mm.
+3. **Placement** — **done.** Card at centre x 156.35, +0.75 mm of nav clearance.
+4. **Model** — **done for the geometry as drawn.** Bottom bracket (plate on two
+   Ø8 insert bosses, two clamp towers with arms, two cartridges, two thumb
+   knobs) and top bar (bosses, raised bridge, edge hook). 7 bodies.
+5. **A/B** — point pad vs. short rail cartridge — **open**; the coupon prints the
+   bosses, the cartridges still need a rail variant to compare against.
+6. **Full part** — print, install inserts, assemble. Add supports to the
+   brackets' long horizontal plates (see Open items 5).
 
 ## Open items
 
+Resolved by the CAD, checked against `cad/reference/board.json`:
+
+* **Bolt-head back-side clearance.** All 128 B.Cu parts were tested against a
+  Ø5.5 head plus 1 mm clearance at every hole. The tightest is H5 (I2C
+  connector, 6.89 mm). No interference. Note the `conservative_radius` circle
+  over-reports badly for long parts and false-alarmed on the AAA holder at H4
+  (−2.06 mm); the rotated footprint rectangle gives 10.85 mm. Use the rectangle.
+* **Tower placement** is now enforced by a build-time check: both towers stand
+  outside the sleeve's X range, so nothing above the card plane touches the card.
+* **Clamp contact** is checked to be on the sleeve and outside the art box.
+
+Still open:
+
 1. Confirm the art window against a flatbed scan before treating ≈51 × 33 as final.
-2. Confirm the M3 bolt head clears the back-side parts **with the ≈0.5 mm spacer
-   fitted**, at the chosen length.
-3. Verify the top-hook grip depth against the card's R3.18 corner radius and the
+2. Verify the top-hook grip depth against the card's R3.18 corner radius and the
    top-edge notch (x 151.70 → 158.10).
-4. **▸ Confirm the SK6812MINI height.** The repo's `neopixel.stp` says 0.75 mm;
-   SK6812MINI is commonly ~1.6 mm. The bracket's 3.6 mm underside clears either,
-   so this is a margin question, not a blocker.
-5. **▸ Clamp towers must stand outside the card's footprint** — sleeved card
-   x 120.66 → 186.66, y 70.35 → 164.35 after the shift — and reach inward.
-   Nothing above the card plane may sit inside that rectangle.
+3. Confirm the SK6812MINI height. `neopixel.stp` says 0.75 mm, the common part is
+   ~1.6 mm. `led_h` is set to the conservative 1.6 and the clearance is checked;
+   the plate's 3.6 mm underside clears either by ≥2.0 mm.
+4. Insert pilot diameter — the coupon sweeps 4.0–4.5 mm in 0.1 mm steps.
+5. **Printability (unresolved).** Both brackets are horizontal plates carried on
+   two bosses, so each has a ~100 mm unsupported span at its underside. Expect to
+   need support material, or print on a different axis. A print-orientation
+   decision is still outstanding.
+6. **A/B:** point pad vs. short rail cartridge — not yet decided.
