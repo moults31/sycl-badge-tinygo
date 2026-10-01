@@ -147,3 +147,40 @@ func TestMenuSelectsHighlightedCart(t *testing.T) {
 		t.Fatalf("expected panic cart launch, state=%v crash=%q", r.state, r.crash)
 	}
 }
+
+// TestBootCartLaunchesNamedCart checks BootCart brings the badge up inside the
+// named cart, and that the usual exit chord still reaches the menu.
+func TestBootCartLaunchesNamedCart(t *testing.T) {
+	lib := []Factory{
+		{Name: "PLASMA", New: NewPlasma},
+		{Name: "CARD SHOW", New: NewCardShow},
+	}
+	r, env, _ := newTestRunner(lib)
+	r.BootCart("CARD SHOW")
+
+	// First step runs Start and switches into the cart.
+	step(env, r, Buttons{}, 2)
+	if r.state != stRun {
+		t.Fatalf("boot state = %v, want running", r.state)
+	}
+	if got := r.active.Name(); got != "CARD SHOW" {
+		t.Fatalf("boot cart = %q, want CARD SHOW", got)
+	}
+
+	// Start+Select still exits to the cart menu.
+	step(env, r, Buttons{Start: true, Select: true}, 20)
+	step(env, r, Buttons{}, 2)
+	if r.state != stMenu {
+		t.Fatalf("exit chord from boot cart left state %v, want menu", r.state)
+	}
+}
+
+// TestBootCartUnknownFallsBackToMenu checks an unknown boot name is ignored.
+func TestBootCartUnknownFallsBackToMenu(t *testing.T) {
+	r, env, _ := newTestRunner(plasmaLib())
+	r.BootCart("NOPE")
+	step(env, r, Buttons{}, 2)
+	if r.state != stMenu {
+		t.Fatalf("unknown BootCart left state %v, want menu", r.state)
+	}
+}

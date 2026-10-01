@@ -66,7 +66,7 @@ type cardCalib struct {
 // flash), and maps the finished frame through a colour look. Left/Right cycle
 // the baked library; Select toggles the alignment overlay (joystick nudges the
 // mask, A/B rotate it) for lining the glow up with the printed art; Click
-// cycles the output colour mapping; B toggles breathing; holding A opens the
+// cycles the output colour mapping; B toggles breathing; Start opens the
 // effects menu.
 type CardShow struct {
 	card CardAsset
@@ -105,8 +105,6 @@ type CardShow struct {
 	menu bool
 	// menuRow is the focused row (see the cardMenuRow constants).
 	menuRow int
-	// aHeld counts frames A has been down, to tell a flash tap from a menu hold.
-	aHeld uint32
 
 	// colorMap selects how the finished frame is mapped onto the panel's
 	// colour order; Click cycles it (see the cardColorMap constants).
@@ -217,11 +215,6 @@ const (
 
 // cardMenuNames labels each row in the menu.
 var cardMenuNames = [...]string{"COLOUR", "CARD", "BREATHE", "HOLO", "SPARKLE"}
-
-// cardMenuHoldFrames is how long A must be held to open the menu. Below it A
-// is the momentary attack flash (cardFlashFrames); at or above it the menu
-// opens and the flash does not fire (~0.4 s at 60 fps, longer than a tap).
-const cardMenuHoldFrames = 24
 
 // NewCardShow returns the card lightshow cartridge using the baked library.
 func NewCardShow() Cartridge { return &CardShow{} }
@@ -361,23 +354,18 @@ func (c *CardShow) Update(p *Platform) {
 		c.mapToast = cardMapToastFrames
 	}
 
-	// A opens the effects menu on a hold; a tap is the attack flash. Fire the
-	// flash on the press edge so a tap reacts immediately, then cancel it and
-	// open the menu if A is still down after the hold threshold.
+	// Start opens the effects menu. Start+Select is the runtime's exit chord,
+	// so the menu only opens when Start is pressed alone (Select up) and not
+	// while the calibration overlay is up.
+	if pressed(p.buttons.Start, p.prev.Start) && !p.buttons.Select && !c.calib {
+		c.menu = true
+		c.menuRow = 0
+		c.flash = 0
+	}
+
+	// A is the attack flash.
 	if pressed(p.buttons.A, p.prev.A) && !c.calib {
 		c.flash = cardFlashFrames
-		c.aHeld = 0
-	}
-	if !c.calib && p.buttons.A {
-		c.aHeld++
-		if c.aHeld >= cardMenuHoldFrames {
-			c.menu = true
-			c.menuRow = 0
-			c.aHeld = 0
-			c.flash = 0
-		}
-	} else {
-		c.aHeld = 0
 	}
 
 	if c.calib {
@@ -483,7 +471,7 @@ func (c *CardShow) updateMenu(p *Platform) {
 		}
 	}
 
-	if pressed(p.buttons.B, p.prev.B) {
+	if pressed(p.buttons.B, p.prev.B) || pressed(p.buttons.Start, p.prev.Start) {
 		c.menu = false
 	}
 }
@@ -687,7 +675,7 @@ func (c *CardShow) drawMenu(p *Platform) {
 		p.drawText(x0+valueCol*8, y+1, v, dim, bg)
 	}
 
-	p.drawText(x0, y0+15+int(cardMenuRows)*12+2, "UP/DN ROW  B CLOSE", dim, bg)
+	p.drawText(x0, y0+15+int(cardMenuRows)*12+2, "UP/DN ROW  B CLOSES", dim, bg)
 }
 
 // onOff renders a boolean menu value.

@@ -368,33 +368,41 @@ func pressFrame(c *CardShow, p *Platform, b Buttons) {
 	c.Update(p)
 }
 
-// TestCardShowMenuOpensOnHold checks that holding A opens the menu (and does
-// not leave a flash running), while a tap leaves the menu closed and flashes.
-func TestCardShowMenuOpensOnHold(t *testing.T) {
+// TestCardShowMenuOpensOnStart checks Start opens the menu, A is the flash and
+// does not open it, and Start+Select does not open the menu (that is the
+// runtime's exit chord).
+func TestCardShowMenuOpensOnStart(t *testing.T) {
 	p := newCardPlatform()
 	c := NewCardShowWith([]CardAsset{testCard("A", []byte{0xF0, 0xFF})}).(*CardShow)
 	c.Start(p)
 
-	// Tap: flash, no menu.
+	// A tap flashes and does not open the menu.
 	pressFrame(c, p, Buttons{A: true})
-	if !c.menu && c.flash == 0 {
-		t.Fatal("a tap left neither a flash nor a menu")
+	if c.menu {
+		t.Fatal("A opened the menu")
+	}
+	if c.flash == 0 {
+		t.Fatal("A did not fire the flash")
 	}
 	pressFrame(c, p, Buttons{})
-	if c.menu {
-		t.Fatal("a tap opened the menu")
+
+	// Start opens the menu.
+	pressFrame(c, p, Buttons{Start: true})
+	if !c.menu {
+		t.Fatal("Start did not open the menu")
 	}
 
-	// Hold past the threshold: menu opens, flash is cancelled.
-	pressFrame(c, p, Buttons{A: true})
-	for i := 0; i < int(cardMenuHoldFrames)+1; i++ {
-		pressFrame(c, p, Buttons{A: true})
+	// B closes it.
+	pressFrame(c, p, Buttons{B: true})
+	pressFrame(c, p, Buttons{})
+	if c.menu {
+		t.Fatal("B did not close the menu")
 	}
-	if !c.menu {
-		t.Fatalf("holding A for %d frames did not open the menu", cardMenuHoldFrames)
-	}
-	if c.flash != 0 {
-		t.Fatalf("menu opened with a flash still pending (%d)", c.flash)
+
+	// Start+Select (the exit chord) must not open the menu.
+	pressFrame(c, p, Buttons{Start: true, Select: true})
+	if c.menu {
+		t.Fatal("Start+Select opened the menu")
 	}
 }
 
@@ -408,7 +416,7 @@ func TestCardShowMenuEditsEffects(t *testing.T) {
 	}).(*CardShow)
 	c.Start(p)
 
-	// Open the menu directly (the hold gesture is covered above).
+	// Open the menu directly (the Start gesture is covered above).
 	c.menu = true
 	c.menuRow = int(rowColour)
 	start := c.colorMap

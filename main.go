@@ -19,5 +19,7 @@ func main() {
 	}
 	runner := cartridge.NewRunner(selectEnv(), lcdDisplay{}, lib)
 	runner.SetLogger(func(m string) { fmt.Println(m) })
+	// The badge comes up in CARD SHOW; Start+Select exits to the cart menu.
+	runner.BootCart("CARD SHOW")
 	runner.Run()
 }

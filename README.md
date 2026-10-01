@@ -89,6 +89,10 @@ loader, no second core, and no second TinyGo runtime.
 - Hold **Start+Select** for 250 ms to exit a cart. The chord is edge-triggered,
   so a chord held across a launch does not bounce straight back. **A** launches
   the highlighted cart; joystick up/down moves the selection.
+- The badge **boots straight into CARD SHOW** (`Runner.BootCart` in
+  `main.go`), so the lightshow is up with no button press; **Start+Select**
+  exits to the cart menu as usual. A host/sim build can skip this and start on
+  the menu.
 
 The runtime lives in `cartridge/` and is deliberately hardware-free, so the
 menu, launch/exit, fresh-`Start`, and panic-recovery paths are covered by
@@ -197,15 +201,16 @@ the effects' brightness. That is deliberate — it keeps sparkles and holo tinte
 — but it does mean effects and colour are not strictly orthogonal.
 
 **Controls.** **Left/Right** cycle the baked card library; **Select** toggles
-the alignment overlay (joystick nudges the mask, A/B rotate it); **A** taps the
-attack flash and **holding A** opens the effects menu; the joystick **Click**
-cycles the colour mapping; **B** toggles breathing.
+the alignment overlay (joystick nudges the mask, A/B rotate it); **A** fires the
+attack flash; **Start** opens the effects menu (Start+Select still exits the
+cart); the joystick **Click** cycles the colour mapping; **B** toggles
+breathing.
 
-**The effects menu** (hold **A**, ~0.4 s) edits every setting with the stick:
+**The effects menu** (press **Start**) edits every setting with the stick:
 `Up/Down` move the row, `Left/Right` change the value (colour and card wrap,
-booleans toggle), `B` closes. The show keeps rendering behind a dimmed panel so
-a change previews immediately, and the menu is drawn *after* the colour map so
-its text is legible on any look mode. Rows:
+booleans toggle), `B` (or Start) closes. The show keeps rendering behind a
+dimmed panel so a change previews immediately, and the menu is drawn *after*
+the colour map so its text is legible on any look mode. Rows:
 
 ```
 COLOUR    FLUX

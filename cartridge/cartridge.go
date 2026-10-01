@@ -146,6 +146,21 @@ func NewRunner(env Env, disp Display, lib []Factory) *Runner {
 // SetFrameMillis changes the target frame pace (default ~60 fps).
 func (r *Runner) SetFrameMillis(ms uint32) { r.frameMs = ms }
 
+// BootCart launches the library cart with this name immediately, so the badge
+// comes up inside that cart instead of on the menu. The menu is still reachable
+// with the usual Start+Select exit chord. An unknown name is ignored and the
+// runner boots to the menu.
+func (r *Runner) BootCart(name string) {
+	for i, f := range r.lib {
+		if f.Name == name {
+			r.sel = i
+			r.active = f.New()
+			r.state = stStart
+			return
+		}
+	}
+}
+
 // SetLogger attaches an optional sink for lifecycle events (launch, exit, or a
 // recovered panic). It is how the firmware surfaces state on USB-CDC.
 func (r *Runner) SetLogger(f func(string)) { r.log = f }
