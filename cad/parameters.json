@@ -37,11 +37,12 @@
       {"name": "card_h", "expression": "87.5 mm", "status": "verified", "comment": "bare card height (measured 87.5)"},
       {"name": "sleeve_w", "expression": "66.0 mm", "status": "verified", "comment": "sleeved card width (measured 66.0)"},
       {"name": "sleeve_h", "expression": "94.0 mm", "status": "verified", "comment": "sleeved card height (measured 94.0)"},
-      {"name": "art_w", "expression": "51.0 mm", "status": "verified", "comment": "art window width (derived; confirm against a flatbed scan)"},
-      {"name": "art_h", "expression": "33.0 mm", "status": "verified", "comment": "art window height (derived)"},
-      {"name": "art_inset_l", "expression": "6.0 mm", "status": "verified", "comment": "art window inset from card left (derived)"},
-      {"name": "art_inset_r", "expression": "6.0 mm", "status": "verified", "comment": "art window inset from card right (derived)"},
-      {"name": "art_inset_t", "expression": "13.0 mm", "status": "verified", "comment": "art window inset from card top (derived)"},
+      {"name": "art_w", "expression": "57.0 mm", "status": "verified", "comment": "art window width, worst case in the target set + 1 mm margin each side. Measured off the SV-era template (Horsea, Tandemaus/Oswaldo Kato) at 54.6 mm; all nine target cards share that layout, JP and Western alike."},
+      {"name": "art_h", "expression": "38.5 mm", "status": "verified", "comment": "art window height, worst case + 1 mm margin. Measured 35.2 mm on the SV-era template"},
+      {"name": "art_inset_l", "expression": "3.0 mm", "status": "verified", "comment": "measured 4.4 mm from the card left, minus 1 mm margin; clamp contact must stay outside this"},
+      {"name": "art_inset_r", "expression": "3.0 mm", "status": "verified", "comment": "measured 4.0 mm from the card right, minus 1 mm margin"},
+      {"name": "art_inset_t", "expression": "5.0 mm", "status": "verified", "comment": "measured 6.5 mm from the card top, minus 1 mm margin; this anchors the placement"},
+      {"name": "art_centre_top", "expression": "art_inset_t + art_h / 2", "status": "verified", "comment": "art window centre, measured down from the card's top edge; 24.25 mm on the SV-era template"},
       {"name": "sleeve_margin_x", "expression": "(sleeve_w - card_w) / 2", "status": "verified", "comment": "sleeve overhang each side of the card; a penny sleeve is symmetric"},
       {"name": "sleeve_margin_y", "expression": "(sleeve_h - card_h) / 2", "status": "verified", "comment": "sleeve overhang top and bottom of the card"}
     ],
@@ -55,8 +56,8 @@
       {"name": "card_cx_plan", "expression": "4.19 mm", "status": "verified", "comment": "sleeved-card centre X: art-centred, then shifted +1.94 off the nav (plan)"},
       {"name": "nav_clearance", "expression": "0.75 mm", "status": "verified", "comment": "extra shift so the sleeve's left edge clears the nav, which otherwise sits flush at 0"},
       {"name": "card_cx", "expression": "card_cx_plan + nav_clearance", "status": "verified", "comment": "sleeved-card centre X, final = 4.94"},
-      {"name": "card_top_y", "expression": "33.75 mm", "status": "verified", "comment": "sleeved-card top edge (+1.75 over the board top edge)"},
-      {"name": "card_bot_y", "expression": "card_top_y - sleeve_h", "status": "verified", "comment": "sleeved-card bottom edge, 28.25 below the board"}
+      {"name": "card_top_y", "expression": "active_cy + art_centre_top + sleeve_margin_y", "status": "verified", "comment": "sleeved-card top edge; derived so the art window sits centred on the active area"},
+      {"name": "card_bot_y", "expression": "card_top_y - sleeve_h", "status": "verified", "comment": "sleeved-card bottom edge: this overhangs the board by 30.25 mm, which is accepted"}
     ],
     "controls": [
       {"name": "nav_top_z", "expression": "8.00 mm", "status": "verified", "comment": "5-way nav top; the only front-side feature above the card plane"},

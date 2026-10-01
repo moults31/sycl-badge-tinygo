@@ -102,9 +102,9 @@ Source: `sycl-badge/kicad/v2/packages3D/JD-T18003-T01-Body.stp`, `docs/JD-T1800.
 | Bare card W × H | 63.5 × 88.9 | **63.0 × 87.5** |
 | Sleeved card W × H | 66.7 × 92.1 | **66.0 × 94.0** |
 | Stack thickness (card + sleeve) | ~0.39 | **~0.40** |
-| Art window W × H | no public standard | **≈ 51 × 33** (derived) |
-| Art-window insets L / R / T / B | — | **≈ 6 / 6 / 13 / 43** (derived) |
-| Art-window centre, from card top | — | **≈ 29.5 mm** (≈15 mm above card centre) |
+| Art window W × H | no public standard | **≈ 57.0 × 38.5** (worst case + 1 mm margin) — see Deriving the art window |
+| Art-window insets L / R / T / B | — | **3.0 / 3.0 / 5.0 / 44.0 (with margin)** |
+| Art-window centre, from card top | — | **≈ 24.25 mm** (≈14 mm above card centre) |
 
 ## Measured values (calipers, 2026-09-30)
 
@@ -142,20 +142,41 @@ From the edge offsets: active rectangle **x 136.41 → 170.91** (w 34.5),
 the measured 34.5 × 27.5 vs the 35.04 × 28.03 datasheet is consistent with
 reading to the visible edge.)
 
-### Deriving the art window
+### Target set and the art window
 
-No public standard exists, so it was derived from the in-repo card images
-(`assets/cards/*.webp`, gitignored) by scaling image width to the 63.5 mm card
-width and locating the illustration frame via row/column texture profiles plus
-visual overlay. The two cleanest cards:
+The target set is nine cards, all of them the **same SV-era layout** — a BASIC
+header, a metallic rule under the art, then the text body. That matters: the art
+window is fixed by the *template*, not by the card, so one measurement set covers
+all nine. The five Japanese ones (cleffa, smoliv, tandemaus, starmie, electrode)
+turn out to share that template with the four Western ones (jigglypuff, vileplume,
+horsea, shuppet) — checked by overlaying a millimetre grid on a card of each.
 
-| Card | W × H (mm) | Insets L / R / T / B (mm) | Art-centre from top (mm) |
-| --- | --- | --- | --- |
-| charizard-classic | 51.4 × 31.4 | 5.2 / 6.8 / 14.6 / 43.0 | 30.2 |
-| magikarp-base | 50.3 × 35.1 | 6.5 / 6.7 / 11.4 / 42.2 | 29.0 |
+| Card | images | window (measured, mm) |
+| --- | --- | --- |
+| horsea | EN | insets L 4.4 / T 6.5 / R 4.0 / B 45.7 → **54.6 × 35.2** |
+| tandemaus (jp) | JP | the same within reading error |
+| the other seven | — | assumed the same template, not individually measured |
 
-**Representative: W ≈ 51, H ≈ 33, insets L/R ≈ 6, centre ≈ 29.5 mm from the
-card top** (±1–2 mm until a flatbed scan refines it).
+Measured from a millimetre grid laid over the scan, scaled by the measured card
+(63.0 × 87.5 mm). The scans are edge-to-edge cards, verified: each image's pixel
+bounding box is the whole image and the aspect ratios (0.716–0.718) match the real
+card's 0.720, so the scaling is sound.
+
+Art content varies far more than the window does (a BASE-magikarp in the shared
+library measures 50.5 × 37.1 with 6.3 mm side insets), so the keep-out is the
+window **plus 1 mm of margin on every side**: **57.0 × 38.5 mm**, insets
+**3.0 / 3.0 / 5.0 / 44.0**.
+
+**Placement budget:** the panel (35.04 × 28.03) against a 57.0 × 38.5 keep-out
+leaves **±11.0 mm horizontal and ±5.2 mm vertical** trim.
+
+The clamp contact is unaffected: at its Y the clamp sits ~12.8 mm below the art
+window's lower edge.
+
+**Excluded:** the older scans in the shared library — magikarp-base,
+charmander-base, charmeleon, eiscue-ex, charizard-classic. Noted rather than
+assumed away, because including eiscue-ex would widen the keep-out to
+59.8 × 40.4 mm and cut the clamp's margin below the art to 6.8 mm. Still clear.
 
 **Placement budget:** panel 35.04 × 28.03 against a ~51 × 33 window leaves
 **±8 mm horizontal but only ±2.5 mm vertical** trim. Vertical is the tight axis.
@@ -189,17 +210,23 @@ must **not** overlap the nav footprint. This is the only front-side interference
 
 ### Placement (worked out)
 
-Art-centred on the active area:
+The vertical placement is **derived from the art window**, so the art box is
+centred on the active area:
 
-* card (66.0 × 94.0) spans **x 120.66 → 186.66**, **y 70.35 → 164.35**.
-* The card's left edge then overlaps the nav (right edge x 122.6) by **1.94 mm**,
-  so **shift the card +1.94 mm right**: centre x → **155.60**. The art centre is
-  then 1.94 mm right of the active centre — well inside the ±8 mm budget.
-* **▸ Then shift a further +0.75 mm right**: centre x → **156.35**. The +1.94
-  shift alone leaves the sleeve's left edge at x 122.60, *exactly* flush with
-  the nav's right edge, and the nav protrudes 2 mm above the card plane. The
-  ±8 mm art budget absorbs the extra shift easily.
-* After the shift the right edge is 188.60, overlapping B1 (183.75–190.25) but
+* **card_top_y = active_cy + art_centre_top + sleeve_margin_y**
+  = 4.25 + 24.25 + 3.25 = **31.75 mm** from the board centre. That is 2.0 mm lower
+  than the earlier hand-computed 33.75 mm, and it is the number that makes each of
+  the nine target cards' art land centred on the panel.
+* The card's **top overhang disappears** — the sleeve's top edge sits 0.26 mm
+  *inside* the board's top edge (y 72.100). The **bottom overhang grows to
+  30.24 mm**; accepted.
+* The **horizontal placement is constrained by the nav, not the art.** The art
+  window is centred in the card, so it would want card centre x = 152.66 (active
+  centre); the nav forces it to **156.35**. The art ends up 3.69 mm right of the
+  panel centre, inside the ±11 mm budget.
+* The sleeve's left edge is at x 123.35 mm and the nav's right edge at 122.6 —
+  **0.75 mm clear**, which the nav then covers above the card plane by 2 mm.
+* After the shift the right edge is 189.35, overlapping B1 (183.75–190.25) but
   not A1 (192.28+); B1 is below the card plane, so it does not matter.
 
 ### Overhang
