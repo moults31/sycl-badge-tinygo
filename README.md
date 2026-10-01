@@ -315,14 +315,49 @@ Other notes:
   the driver just waits for the power-on reset to settle.
 - SPI0 is write-only. `SDI` is set to `machine.NoPin` — this both matches the
   hardware (no MISO) and prevents the SPI peripheral from claiming GPIO0.
-- The backlight is on `BKLT` (GPIO16). It is driven by **PWM** (RP2350 slice 0,
-  channel A, ~200 kHz) so carts can breathe or pulse the whole panel; level 255
-  is the reference firmware's full brightness. The panel's `TFT_LITE` rail is
-  tied to VBUS, so this is an enable/duty control rather than a boost input.
+- The backlight is on `BKLT` (GPIO16), driven by **PWM** (RP2350 slice 0,
+  channel A, ~1 kHz — matching the reference firmware's `clk_div=150,
+  wrap=1023` backlight slice). GPIO16 is the **enable input of the TPS61041
+  backlight boost converter** (`BKLT_EN` in the badge schematic): the boost's
+  FB node is strapped to the LED sense rail by a solder jumper, so the duty
+  cycle gate-modulates the LED rail and the panel reads duty as brightness.
+  The LED rail reaches the panel through the FFC, not this GPIO directly —
+  so the effective "on" threshold sits near full duty, and any dimming has to
+  run through this one gate (see "CARD SHOW went black" below for what a
+  too-fast carrier does).
 
 If red and blue come out swapped on hardware, set the `BGR` bit in `MADCTL`
 (i.e. `0x68` instead of `0x60`); the image data is standard RGB565 (high byte
 first), which is what `tools/make_gopher.py` emits.
+
+### CARD SHOW went black on real hardware
+
+Symptom, reported from the first on-device test of the card lightshow: the
+image (the lit card mask) appears for < 1 s, the panel goes fully dark for a
+manual-stopwatch ~8 s, then it lights again — repeating. The host sim shows a
+steady glow the whole time.
+
+Cause: the backlight breathe ran faster than the backlight's boost converter
+can follow. The driver set the GPIO16 PWM period to 5 µs (~200 kHz). GPIO16 is
+not an LED anode: it is the **enable of the TPS61041 backlight boost**, whose
+feedback node is strapped to the LED sense rail. A ~200 kHz chop mostly falls
+below what the converter needs to keep the rail up: only duty near full
+actually lights, and any duty below that reads as off — even though the sim
+(which models only the framebuffer and a duty number) shows a steady glow.
+CARD SHOW then makes the picture itself near-black during those troughs
+(ambient ≈ RGB(56,26,6), and 50–75 % of each face's mask sits at nibble 0),
+so "dim backlight" and "black picture" arrive together. Net effect, exactly as
+reported: a brief lit flash while duty rides the top of the breath, then a
+long fully-dark stretch — the sim's breath is one ~3 s cycle at 60 fps, and on
+hardware the converter's enable/settle behaviour stretched the dark phase to
+the ~8 s the stopwatch caught.
+
+Fix: drive the backlight the way the reference firmware does —
+`clk_div=150, wrap=1023`, i.e. ~1 kHz at 150 MHz — which is what `display.go`
+now does (`frontlightPWMPeriod = 1_000_000`). At 1 kHz the duty encodes
+brightness on this boost the way the panel expects, and the lightshow's
+ambience reads as ambience again. (Verified against the reference firmware's
+`src/os/drivers/lcd.zig` and the badge's `kicad/v2` schematic.)
 
 ### Regenerating the image
 
