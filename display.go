@@ -51,16 +51,21 @@ const (
 	cmdGMCTRN1 = 0xE1
 )
 
-// madctlLandscape = MX | MV. This is the value the reference firmware uses to
-// rotate the native 128x160 panel into a 160x128 landscape canvas: with MV (=row
-// /column exchange) the column address space becomes 160 wide, which is exactly
-// what the draw calls below assume.
+// madctlLandscape = MX | MV | BGR. MV (=row/column exchange) rotates the native
+// 128x160 panel into a 160x128 landscape canvas: the column address space
+// becomes 160 wide, which is exactly what the draw calls below assume.
 //
 // The previous code used the tinygo st7735 driver at rotation 0 (MADCTL=0xC0,
 // no MV) while addressing 160 columns. On this panel the column (source) axis is
 // only 128 deep without MV, so every 160-wide write overran the RAM, wrapped,
 // and produced the diagonal/streaky garbage seen on hardware.
-const madctlLandscape = 0x60
+//
+// BGR (bit 3) is set because this panel is wired BGR. Everything the runtime
+// renders -- the baked card art, the gopher, the menu -- is standard RGB565 (R
+// in bits 15..11), which is also what the host simulator decodes, so without BGR
+// the panel swaps red and blue: a red card reads blue and a blue card reads
+// yellow. With BGR set the panel agrees with the sim.
+const madctlLandscape = 0x68
 
 var (
 	csPin = lcdCS

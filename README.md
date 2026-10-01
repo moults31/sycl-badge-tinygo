@@ -132,7 +132,9 @@ enough. The banner reports which set was loaded; with no manifest (or no
 Python/Pillow) it falls back to the cards already baked into the binary. The
 firmware still bakes its cards at build time through `make build`/`card-data`, so
 both use one generator. In CARD SHOW, **left/right (or A/D) cycle the loaded cards**;
-Select's overlay shows the current name and `n/total` index.
+Select's overlay shows the current name and `n/total` index, and the stick
+**click** cycles the output colour mapping (`RGB`/`BGR`/`SWAP16`/`BGR+SWAP16`;
+see [Red and blue came out swapped](#red-and-blue-came-out-swapped-on-real-hardware)).
 
 Extra flags pass through, e.g.
 `make sim-ui SIMUI_FLAGS="-addr 127.0.0.1:8423 -open=false"` or
@@ -178,7 +180,9 @@ by a small palette and animated as breathing, a sweeping holo band, drifting
 sparkles, and an A-button flash. The whole panel's intensity also breathes
 through the backlight PWM. **Left/Right** cycle the baked card library;
 **Select** toggles the alignment overlay (which shows the card name and its
-`n/total` library index); **A** fires the attack flash.
+`n/total` library index); **A** fires the attack flash; the joystick **Click**
+cycles the output colour mapping (`RGB`, `BGR`, `SWAP16`, `BGR+SWAP16`) with a
+short on-screen label.
 
 Because diffusion washes out fine detail, each asset is tiny (a 4-bit mask
 stretched across the panel and bilinearly upscaled). Assets are **generated at
@@ -296,10 +300,11 @@ panel-specific power/gamma settings rather than the generic ST7735 init that
 `tinygo.org/x/drivers/st7735` sends.
 
 The important detail is **orientation**. The panel is natively 128x160; the
-driver addresses it as a 160x128 landscape canvas exactly as the reference does:
+driver addresses it as a 160x128 landscape canvas:
 
-- `MADCTL = 0x60` (`MX | MV`). The `MV` bit exchanges the row/column axes, which
-  makes the column address space 160 wide.
+- `MADCTL = 0x68` (`MX | MV | BGR`). The `MV` bit exchanges the row/column axes,
+  which makes the column address space 160 wide; `BGR` makes the panel read the
+  standard-RGB565 frames in the order it is actually wired (see below).
 - Draws then use `CASET = 0..159`, `RASET = 0..127`.
 
 The first version of this driver used `tinygo.org/x/drivers/st7735` at
@@ -326,9 +331,33 @@ Other notes:
   run through this one gate (see "CARD SHOW went black" below for what a
   too-fast carrier does).
 
-If red and blue come out swapped on hardware, set the `BGR` bit in `MADCTL`
-(i.e. `0x68` instead of `0x60`); the image data is standard RGB565 (high byte
-first), which is what `tools/make_gopher.py` emits.
+### Red and blue came out swapped on real hardware
+
+Symptom, reported from the first on-device test of the card art mode: the card
+show was colour-accurate in the host sim but not on the panel. A red card
+(Electrode's body, sim RGB(216,56,72)) read **blue**, and a blue card (Horsea's
+body, sim RGB(0,176,208)) read **yellow**. Both are exactly the red/blue channel
+swap of the source art, which the sim reproduces faithfully.
+
+Cause: the DT018BTFT panel is wired **BGR**, but `MADCTL` was left at `0x60`
+(`MX | MV`, RGB order). Every frame is standard RGB565 — `RGB565()` puts red in
+bits 15..11, `tools/make_gopher.py` emits high-byte-first RGB565, and the host
+sim decodes the same layout — so the panel's RGB interpretation swapped R and B
+on screen. This affected every cart, not just CARD SHOW; it was simply invisible
+in the plasma gradients and zeroman sprite palettes.
+
+Fix: set the `BGR` bit, `MADCTL = 0x68` (`display.go`). The panel now agrees
+with the sim and the source art. (The image data stays standard RGB565, high
+byte first.)
+
+Because the mapping is the sort of thing a different panel/batch or a
+worktree that predates this fix can get wrong, **CARD SHOW keeps a runtime
+colour-mapping cycle** on the joystick **Click** (unused elsewhere): `RGB`
+(identity, the correct mapping), `BGR` (the pre-fix R/B swap), `SWAP16` (the
+pixel's two bytes swapped), and `BGR+SWAP16`. A short `CMAP ...` label names the
+active mapping, so the correct one can be confirmed on hardware without a
+rebuild. The cycle is applied to the finished frame, so the sim previews exactly
+what each mapping does.
 
 ### CARD SHOW went black on real hardware
 

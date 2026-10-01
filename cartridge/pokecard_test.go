@@ -190,3 +190,90 @@ func TestCardShowCyclesInjectedLibrary(t *testing.T) {
 		t.Fatalf("Left wrap: card=%q, want B", c.card.Name)
 	}
 }
+
+// TestSwapRB checks the red/blue channel swap at the heart of the panel's BGR
+// wiring: red becomes blue, blue becomes red, green is untouched.
+func TestSwapRB(t *testing.T) {
+	cases := []struct {
+		in      uint16
+		r, g, b uint8
+	}{
+		{RGB565(255, 0, 0), 0, 0, 248},
+		{RGB565(0, 0, 255), 248, 0, 0},
+		{RGB565(0, 255, 0), 0, 252, 0},
+	}
+	for _, tc := range cases {
+		r, g, b := unpack(swapRB(tc.in))
+		if r != tc.r || g != tc.g || b != tc.b {
+			t.Fatalf("swapRB(%04X) = %d,%d,%d, want %d,%d,%d",
+				tc.in, r, g, b, tc.r, tc.g, tc.b)
+		}
+	}
+}
+
+// TestApplyColorMap checks each mapping rewrites the frame as named and that
+// the byte-swap mappings are their own inverse.
+func TestApplyColorMap(t *testing.T) {
+	red := RGB565(255, 0, 0)
+
+	fb := []uint16{red}
+	applyColorMap(fb, colorRGB)
+	if fb[0] != red {
+		t.Fatalf("identity changed the pixel: %04X", fb[0])
+	}
+
+	applyColorMap(fb, colorBGR)
+	if r, g, b := unpack(fb[0]); r != 0 || g != 0 || b != 248 {
+		t.Fatalf("BGR map: red -> %d,%d,%d, want blue", r, g, b)
+	}
+
+	bgr := fb[0]
+	applyColorMap(fb, colorSwap16)
+	swapped := fb[0]
+	if swapped != bgr<<8|bgr>>8 {
+		t.Fatalf("swap16 map: %04X -> %04X", bgr, swapped)
+	}
+	applyColorMap(fb, colorSwap16)
+	if fb[0] != bgr {
+		t.Fatalf("swap16 is not its own inverse: %04X -> %04X", bgr, fb[0])
+	}
+}
+
+// TestCardShowCyclesColorMap checks the joystick click walks the mapping cycle
+// and wraps back to identity, and that a non-identity mapping changes the
+// finished frame.
+func TestCardShowCyclesColorMap(t *testing.T) {
+	p := newCardPlatform()
+	c := NewCardShowWith([]CardAsset{testCard("A", []byte{0xF0, 0xFF})}).(*CardShow)
+	c.Start(p)
+	if c.colorMap != colorRGB {
+		t.Fatalf("Start mapping = %d, want identity", c.colorMap)
+	}
+
+	c.render(p)
+	base := cloneFrame(p)
+
+	click := func() {
+		p.prev = Buttons{}
+		p.buttons = Buttons{Click: true}
+		c.Update(p)
+		p.prev = p.buttons
+		p.buttons = Buttons{}
+		c.Update(p)
+	}
+
+	want := []cardColorMap{colorBGR, colorSwap16, colorBGRSwap16, colorRGB}
+	for i, w := range want {
+		click()
+		if c.colorMap != w {
+			t.Fatalf("click %d: mapping = %d, want %d", i, c.colorMap, w)
+		}
+	}
+
+	// The cycle visibly changes the frame for every non-identity mapping.
+	c.colorMap = colorBGR
+	c.render(p)
+	if framesEqual(base, p.frame) {
+		t.Fatal("BGR mapping did not change the rendered frame")
+	}
+}

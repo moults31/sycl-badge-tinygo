@@ -65,7 +65,7 @@ type cardCalib struct {
 // across it, adds a type-tinted ambient wash and drifting sparkles, and fires
 // a flash on A. Left/Right cycle the baked library; Select toggles a
 // calibration overlay (joystick nudges the mask, A/B rotate it) for lining the
-// glow up with the printed art.
+// glow up with the printed art; Click cycles the output colour mapping.
 type CardShow struct {
 	card CardAsset
 	cal  *cardCalib
@@ -84,6 +84,13 @@ type CardShow struct {
 	flash uint32
 	spks  []spark
 
+	// colorMap selects how the finished frame is mapped onto the panel's
+	// colour order; Click cycles it (see the cardColorMap constants).
+	colorMap cardColorMap
+	// mapToast counts down the frames the mapping name stays on screen after
+	// the user cycles it.
+	mapToast uint32
+
 	idx   int
 	calib bool
 	cals  []cardCalib
@@ -99,7 +106,33 @@ type spark struct {
 const (
 	cardFlashFrames = 24
 	cardSpkCount    = 8
+
+	// cardMapToastFrames is how long the colour-mapping name lingers after a
+	// click cycle (~1.5 s at 60 fps).
+	cardMapToastFrames = 90
 )
+
+// cardColorMap selects how CARD SHOW's finished RGB565 frame is mapped onto the
+// panel's colour order.
+//
+// The runtime renders standard RGB565 (R in bits 15..11), which is what the
+// host simulator decodes. The badge's DT018BTFT panel is wired BGR, and
+// display.go sets MADCTL's BGR bit so the two agree -- so colorRGB is correct
+// on both. The rest are kept as a runtime cycle (joystick Click) so a build
+// flashed without the BGR fix, or a panel of the opposite order, can be
+// corrected on the spot, and so the before/after can be compared live.
+type cardColorMap uint8
+
+const (
+	colorRGB       cardColorMap = iota // as baked; correct with MADCTL BGR set
+	colorBGR                           // swap red/blue: the pre-BGR-fix appearance
+	colorSwap16                        // swap the pixel's two bytes (endianness)
+	colorBGRSwap16                     // both
+	colorMapCount
+)
+
+// cardColorNames labels the mapping on the toast shown after a click cycle.
+var cardColorNames = [...]string{"RGB", "BGR", "SWAP16", "BGR+SWAP16"}
 
 // NewCardShow returns the card lightshow cartridge using the baked library.
 func NewCardShow() Cartridge { return &CardShow{} }
@@ -118,6 +151,8 @@ func (c *CardShow) Start(p *Platform) {
 	c.t, c.flash = 0, 0
 	c.idx = 0
 	c.calib = false
+	c.colorMap = colorRGB
+	c.mapToast = 0
 
 	c.list = c.library
 	if len(c.list) == 0 {
@@ -189,6 +224,12 @@ func (c *CardShow) Update(p *Platform) {
 	if pressed(p.buttons.Select, p.prev.Select) {
 		c.calib = !c.calib
 	}
+	// Joystick click cycles the output colour mapping. It is unused elsewhere,
+	// so it works in both the lightshow and the calibration overlay.
+	if pressed(p.buttons.Click, p.prev.Click) {
+		c.colorMap = (c.colorMap + 1) % colorMapCount
+		c.mapToast = cardMapToastFrames
+	}
 	if pressed(p.buttons.A, p.prev.A) && !c.calib {
 		c.flash = cardFlashFrames
 	}
@@ -235,6 +276,9 @@ func (c *CardShow) Update(p *Platform) {
 
 	if c.flash > 0 {
 		c.flash--
+	}
+	if c.mapToast > 0 {
+		c.mapToast--
 	}
 }
 
@@ -334,6 +378,46 @@ func (c *CardShow) render(p *Platform) {
 	if c.calib {
 		c.drawGuides(p)
 	}
+
+	if c.mapToast > 0 {
+		c.drawMapToast(p)
+	}
+
+	// Apply the selected colour mapping last, so it also covers the sparks and
+	// the overlay: the user sees exactly what the panel will show.
+	applyColorMap(fb, c.colorMap)
+}
+
+// drawMapToast briefly names the active colour mapping after a click cycle.
+func (c *CardShow) drawMapToast(p *Platform) {
+	name := "CMAP " + cardColorNames[c.colorMap]
+	p.drawText(3, 3, name, RGB565(0xFF, 0xFF, 0x00), RGB565(0x00, 0x00, 0x00))
+}
+
+// applyColorMap rewrites every pixel of a finished frame through the selected
+// mapping. The identity case is a no-op.
+func applyColorMap(fb []uint16, m cardColorMap) {
+	switch m {
+	case colorBGR:
+		for i, v := range fb {
+			fb[i] = swapRB(v)
+		}
+	case colorSwap16:
+		for i, v := range fb {
+			fb[i] = v<<8 | v>>8
+		}
+	case colorBGRSwap16:
+		for i, v := range fb {
+			w := swapRB(v)
+			fb[i] = w<<8 | w>>8
+		}
+	}
+}
+
+// swapRB swaps the 5-bit red and blue fields of a standard RGB565 pixel,
+// turning an RGB mapping into BGR and vice versa.
+func swapRB(v uint16) uint16 {
+	return (v&0x001F)<<11 | (v & 0x07E0) | (v&0xF800)>>11
 }
 
 // sample bilinearly reads the mask at LCD coords (x, y), stretching the mask

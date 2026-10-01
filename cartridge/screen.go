@@ -5,7 +5,7 @@
 package cartridge
 
 // Screen geometry. The panel is natively 128x160; the driver addresses it as
-// a 160x128 landscape canvas (MADCTL=0x60, MX|MV).
+// a 160x128 landscape canvas (MADCTL MX|MV|BGR; see display.go).
 const (
 	Width  = 160
 	Height = 128
