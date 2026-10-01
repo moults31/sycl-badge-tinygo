@@ -67,18 +67,25 @@ var (
 	dcPin = lcdDC
 )
 
-// Backlight PWM. On the RP2350 GPIO16 is PWM slice 0, channel A. Driving the
-// backlight as PWM (instead of a plain GPIO high) lets the lightshow breathe
-// and pulse the whole panel; level 255 reproduces the reference firmware's
-// full-on. The panel's TFT_LITE rail is tied to VBUS, so this is an enable/duty
-// control rather than a boost regulator input -- verified on hardware.
+// Backlight PWM. GPIO16 gates the badge's TPS61041 backlight boost converter
+// (BKLT_EN): the PWM drives the boost's enable input, and its FB node is tied
+// to the LED sense rail, so the duty cycle literally modulates the LED current
+// rail (a 1 kHz enable "chop"), not a brightness-encoded PWM carrier. The
+// reference firmware's own backlight PWM is clk_div=150, wrap=1023 -- about
+// 1 kHz. A ~200 kHz carrier on this enable input does not produce any average
+// brightness: below near-full duty the boost settles dark, which is why the
+// card lightshow's backlight breathing read as a long blackout. Match the
+// reference's 1 kHz; even so, duty resolution outclasses the 0..255 levels we
+// drive. The boost's LED rail is wired through the panel connector, so this is
+// an enable/duty control for the whole show.
 var (
-	blPWM     = machine.PWM0
-	blChannel uint8
+	frontlightPWM = machine.PWM0
+	frontlightCh  uint8
 )
 
-// blPWMPeriod is the PWM period in nanoseconds (~200 kHz, well above flicker).
-const blPWMPeriod = 5_000
+// frontlightPWMPeriod is the PWM period in nanoseconds (~1 kHz, as the
+// reference firmware drives it).
+const frontlightPWMPeriod = 1_000_000
 
 // lcdInit configures the pins and SPI bus, then runs the panel init sequence
 // copied from the reference firmware's init_display().
@@ -88,16 +95,17 @@ func lcdInit() {
 	csPin.High()
 	dcPin.High()
 
-	// Backlight on PWM (GPIO16). Configure it before the panel init and leave
-	// the duty at zero (dark) until the panel is on, then raise it to full.
-	if err := blPWM.Configure(machine.PWMConfig{Period: blPWMPeriod}); err != nil {
+	// Backlight on PWM (GPIO16 = the TPS61041's BKLT_EN). Configure it before
+	// the panel init and leave the duty at zero (dark) until the panel is on,
+	// then raise it to full.
+	if err := frontlightPWM.Configure(machine.PWMConfig{Period: frontlightPWMPeriod}); err != nil {
 		panic("lcd: backlight pwm: " + err.Error())
 	}
-	ch, err := blPWM.Channel(lcdBL)
+	ch, err := frontlightPWM.Channel(lcdBL)
 	if err != nil {
 		panic("lcd: backlight channel: " + err.Error())
 	}
-	blChannel = ch
+	frontlightCh = ch
 
 	// SPI0 on GPIO18 (SCK) / GPIO19 (MOSI). SDI is NoPin: the bus has no MISO
 	// and, more importantly, the zero value (GPIO0) would otherwise be claimed
@@ -150,12 +158,12 @@ func lcdInit() {
 	lcdCmd(cmdDISPON)
 
 	// Panel is on: bring the backlight to full.
-	blPWM.Set(blChannel, blPWM.Top())
+	frontlightPWM.Set(frontlightCh, frontlightPWM.Top())
 }
 
 // lcdSetBacklight sets the backlight duty cycle, 0 (off) .. 255 (full).
 func lcdSetBacklight(level uint8) {
-	blPWM.Set(blChannel, uint32(level)*blPWM.Top()/255)
+	frontlightPWM.Set(frontlightCh, uint32(level)*frontlightPWM.Top()/255)
 }
 
 // lcdCmd sends a command byte (DC low).
