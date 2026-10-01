@@ -1,0 +1,572 @@
+{
+  "format": "sycl-card-holder-reference/1",
+  "generated_by": "cad/reference/kicad_extract.py",
+  "units": "mm",
+  "note": "Edge.Cuts geometry, verbatim. KiCad PCB coordinates: y increases downward.",
+  "outline": [
+    {
+      "kind": "line",
+      "start": [
+        96.40632,
+        75.1013
+      ],
+      "end": [
+        96.410349,
+        133.005911
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        99.310354,
+        136.104665
+      ],
+      "end": [
+        203.204426,
+        136.105861
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        151.7,
+        72.1
+      ],
+      "end": [
+        99.4063,
+        72.10132
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        151.7,
+        72.1
+      ],
+      "end": [
+        153.2,
+        73.6
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        153.2,
+        73.6
+      ],
+      "end": [
+        156.6,
+        73.6
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        158.1,
+        72.1
+      ],
+      "end": [
+        156.6,
+        73.6
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        203.4137,
+        72.09132
+      ],
+      "end": [
+        158.1,
+        72.1
+      ]
+    },
+    {
+      "kind": "line",
+      "start": [
+        206.407506,
+        132.984541
+      ],
+      "end": [
+        206.41368,
+        75.09132
+      ]
+    },
+    {
+      "kind": "arc",
+      "start": [
+        96.40632,
+        75.10132
+      ],
+      "end": [
+        99.40632,
+        72.10132
+      ],
+      "mid": [
+        97.285,
+        72.98
+      ]
+    },
+    {
+      "kind": "arc",
+      "start": [
+        99.310348,
+        136.104665
+      ],
+      "end": [
+        96.410349,
+        133.006077
+      ],
+      "mid": [
+        97.225,
+        135.15
+      ]
+    },
+    {
+      "kind": "arc",
+      "start": [
+        203.41368,
+        72.09132
+      ],
+      "end": [
+        206.41368,
+        75.09132
+      ],
+      "mid": [
+        205.535,
+        72.97
+      ]
+    },
+    {
+      "kind": "arc",
+      "start": [
+        206.407506,
+        132.984541
+      ],
+      "end": [
+        203.206494,
+        136.105861
+      ],
+      "mid": [
+        205.465,
+        135.22
+      ]
+    }
+  ],
+  "bbox": {
+    "x": [
+      96.40632,
+      206.41368
+    ],
+    "y": [
+      72.09132,
+      136.105861
+    ],
+    "w": 110.00736,
+    "h": 64.01454100000001
+  },
+  "mounting_holes": [
+    {
+      "ref": "H2",
+      "at": [
+        100.455,
+        76.17
+      ],
+      "drill": 3.0
+    },
+    {
+      "ref": "H5",
+      "at": [
+        202.305,
+        132.05
+      ],
+      "drill": 3.0
+    },
+    {
+      "ref": "H4",
+      "at": [
+        100.445,
+        132.08
+      ],
+      "drill": 3.0
+    },
+    {
+      "ref": "H3",
+      "at": [
+        202.335,
+        76.15
+      ],
+      "drill": 3.0
+    }
+  ],
+  "front_footprints": [
+    {
+      "ref": "H2",
+      "value": "MountingHole",
+      "footprint": "MountingHole:MountingHole_3mm_Pad",
+      "at": [
+        100.455,
+        76.17
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.25,
+        0.0
+      ],
+      "conservative_radius": 1.625,
+      "pads": 1,
+      "graphic_layers": [
+        "Cmts.User",
+        "F.CrtYd"
+      ]
+    },
+    {
+      "ref": "START1",
+      "value": "SWITCH_TACT_SMT_6MMSMALL",
+      "footprint": "Button_Switch_SMD:SW_Push_1P1T_NO_6x6mm_H9.5mm",
+      "at": [
+        192.35,
+        75.55
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        10.0,
+        6.5
+      ],
+      "conservative_radius": 5.963,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "A1",
+      "value": "SWITCH_TACT_SMT_6MMSMALL",
+      "footprint": "Button_Switch_SMD:SW_Push_1P1T_NO_6x6mm_H9.5mm",
+      "at": [
+        195.535,
+        102.92
+      ],
+      "rot_deg": 90.0,
+      "local_size": [
+        10.0,
+        6.5
+      ],
+      "conservative_radius": 5.963,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "D4",
+      "value": "SK6812MINI",
+      "footprint": "LED_SMD:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm",
+      "at": [
+        151.725,
+        132.225
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        5.9,
+        4.0
+      ],
+      "conservative_radius": 3.564,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "D6",
+      "value": "SK6812MINI",
+      "footprint": "LED_SMD:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm",
+      "at": [
+        135.775,
+        132.2
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        5.9,
+        4.0
+      ],
+      "conservative_radius": 3.564,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "Q1",
+      "value": "ALS-PT19",
+      "footprint": "Diode_SMD:D_0603_1608Metric",
+      "at": [
+        168.2475,
+        73.96
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        2.965,
+        1.47
+      ],
+      "conservative_radius": 1.655,
+      "pads": 2,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "H1",
+      "value": "Logo",
+      "footprint": "SYCL Badge 2024:microzig_logo",
+      "at": [
+        111.8948,
+        123.512741
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        12.891,
+        12.891
+      ],
+      "conservative_radius": 9.115,
+      "pads": 0,
+      "graphic_layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "H5",
+      "value": "MountingHole",
+      "footprint": "MountingHole:MountingHole_3mm_Pad",
+      "at": [
+        202.305,
+        132.05
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.25,
+        0.0
+      ],
+      "conservative_radius": 1.625,
+      "pads": 1,
+      "graphic_layers": [
+        "Cmts.User",
+        "F.CrtYd"
+      ]
+    },
+    {
+      "ref": "B1",
+      "value": "SWITCH_TACT_SMT_6MMSMALL",
+      "footprint": "Button_Switch_SMD:SW_Push_1P1T_NO_6x6mm_H9.5mm",
+      "at": [
+        186.995,
+        106.895
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        10.0,
+        6.5
+      ],
+      "conservative_radius": 5.963,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "D1",
+      "value": "SK6812MINI",
+      "footprint": "LED_SMD:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm",
+      "at": [
+        167.65,
+        132.225
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        5.9,
+        4.0
+      ],
+      "conservative_radius": 3.564,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "J5",
+      "value": "XF3M-1515-1B",
+      "footprint": "Connector_FFC-FPC:Hirose_FH12-15S-0.5SH_1x15-1MP_P0.50mm_Horizontal",
+      "at": [
+        146.35,
+        104.2
+      ],
+      "rot_deg": -90.0,
+      "local_size": [
+        13.62,
+        7.9
+      ],
+      "conservative_radius": 7.873,
+      "pads": 17,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "H4",
+      "value": "MountingHole",
+      "footprint": "MountingHole:MountingHole_3mm_Pad",
+      "at": [
+        100.445,
+        132.08
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.25,
+        0.0
+      ],
+      "conservative_radius": 1.625,
+      "pads": 1,
+      "graphic_layers": [
+        "Cmts.User",
+        "F.CrtYd"
+      ]
+    },
+    {
+      "ref": "U3",
+      "value": "~",
+      "footprint": "sycl-badge:2425755-1",
+      "at": [
+        112.850254,
+        105.29713
+      ],
+      "rot_deg": -45.0,
+      "local_size": [
+        12.4,
+        12.4
+      ],
+      "conservative_radius": 8.768,
+      "pads": 12,
+      "graphic_layers": [
+        "F.Fab"
+      ]
+    },
+    {
+      "ref": "D5",
+      "value": "SK6812MINI",
+      "footprint": "LED_SMD:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm",
+      "at": [
+        143.775,
+        132.2
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        5.9,
+        4.0
+      ],
+      "conservative_radius": 3.564,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "H3",
+      "value": "MountingHole",
+      "footprint": "MountingHole:MountingHole_3mm_Pad",
+      "at": [
+        202.335,
+        76.15
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        3.25,
+        0.0
+      ],
+      "conservative_radius": 1.625,
+      "pads": 1,
+      "graphic_layers": [
+        "Cmts.User",
+        "F.CrtYd"
+      ]
+    },
+    {
+      "ref": "D2",
+      "value": "SK6812MINI",
+      "footprint": "LED_SMD:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm",
+      "at": [
+        159.7,
+        132.175
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        5.9,
+        4.0
+      ],
+      "conservative_radius": 3.564,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    },
+    {
+      "ref": "SELECT1",
+      "value": "SWITCH_TACT_SMT_6MMSMALL",
+      "footprint": "Button_Switch_SMD:SW_Push_1P1T_NO_6x6mm_H9.5mm",
+      "at": [
+        113.1,
+        75.45
+      ],
+      "rot_deg": 0.0,
+      "local_size": [
+        10.0,
+        6.5
+      ],
+      "conservative_radius": 5.963,
+      "pads": 4,
+      "graphic_layers": [
+        "F.CrtYd",
+        "F.Fab",
+        "F.SilkS"
+      ]
+    }
+  ],
+  "derived": {
+    "corner_radii": [
+      3.0,
+      3.0223,
+      3.0,
+      3.1223
+    ],
+    "hole_grid": [
+      101.89,
+      55.93
+    ]
+  },
+  "source": {
+    "path": "../../../../../../code/sycl_land/sycl-badge/kicad/v2/SYCL Badge 2024.kicad_pcb",
+    "sha256": "92074ad83fffde1f4789360c3735104806213762e18032e9a6eb9e64a9a4438d",
+    "bytes": 1651375
+  }
+}

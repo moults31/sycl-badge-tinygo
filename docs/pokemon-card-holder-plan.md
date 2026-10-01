@@ -1,6 +1,6 @@
 # SYCL Badge V2 — Pokémon Card Holder (Design Plan)
 
-Status: design (pre-CAD)
+Status: CAD in progress — reference geometry built and verified in `cad/`
 Target hardware: SYCL Badge V2 (revision 2), RP2354B board
 Source of truth for hardware: reference repo `sycl-badge` (Zig + KiCad + 3D)
 
@@ -34,16 +34,31 @@ mount.
 
 Coordinates are KiCad PCB coordinates in mm (**y increases downward**).
 
-* Outline: **110.008 × 64.006 mm** (x 96.406 → 206.414, y 72.100 → 136.106),
-  centre (151.41, 104.10)
-* Corner radius **R3.0**; thickness **1.6 mm** FR4, 4-layer
+* Outline: **110.007 × 64.015 mm** (x 96.406 → 206.414, y 72.091 → 136.106),
+  centre (151.410, 104.099). The earlier "110.008 × 64.006, centre 151.41,
+  104.10" was rounded.
+* Corner radius **R3.0 nominal**. The drawn arcs are hand-authored
+  start/mid/end points and are **not** a clean R3.0: top-left and top-right are
+  R3.000, bottom-left **R3.022**, bottom-right **R3.122**. The model keeps the
+  drawn arcs rather than idealising them.
+* Thickness **1.6 mm** FR4, 4-layer
 * Top-edge notch **6.4 × 1.5 mm** at x 151.70 → 158.10 (power slider)
 * Mounting holes: **4× Ø3.0 mm**, plated, 6 mm pad
   * H2 (100.455, 76.170), H3 (202.335, 76.150),
     H4 (100.445, 132.080), H5 (202.305, 132.050)
-  * Grid: **101.88 × 55.91 mm**, ~4.05 mm inset from each edge
+  * **Not a perfect rectangle**: spans are top x 101.880, bottom x 101.860,
+    left y 55.910, right y 55.900. The "101.88 × 55.91 grid" is the
+    H2/H3 × H2/H4 pair only, and the ~4.05 mm inset is nominal.
+  * These holes are the **mating datum** for the holder. Use the exact per-hole
+    XY from `cad/reference/board.json`, never the rounded grid.
 
-### Front controls (F.Cu — the user-facing side)
+### Front-side parts (F.Cu — the user-facing side)
+
+The board carries **17 F.Cu footprints**. The six that were tabulated when this
+plan was written are below; rows marked **▸** were added in the 2026-09-30
+review and come from the board file, not from assumption. The full derived list
+(pad counts, layer sets, rotation) is `cad/reference/board.json` →
+`front_footprints`, produced by `cad/reference/kicad_extract.py`.
 
 | Ref | Part | X range | Y range | Height above board |
 | --- | --- | --- | --- | --- |
@@ -53,9 +68,18 @@ Coordinates are KiCad PCB coordinates in mm (**y increases downward**).
 | SELECT1 | SMD tact 6×6 | 108.10–118.10 | 72.20–78.70 | 3.45 body / **5.0 actuator** |
 | U3 | 5-way nav 2425755-1 | ~103.1–122.6 | ~95.6–115.0 | **8.00** |
 | J5 | Hirose FH12-15S-0.5SH FPC (LCD) | 143.35–151.25 | 97.39–111.01 | — |
+| **▸** D1, D2, D4, D5, D6 | SK6812MINI addressable LED | centres x 135.78, 143.78, 151.72, 159.70, 167.65 (pitch ≈7.9) | 130.2–134.2 | **0.75** (`neopixel.stp`); ~1.6 typical |
+| **▸** Q1 | ALS-PT19 ambient light sensor, 0603 | 166.77–169.73 | 73.22–74.69 | ≈0.8 |
+| **▸** H1 | microzig logo — flat, padless (copper + silk) | 105.45–118.34 | 117.07–129.96 | ≈0 |
 
+* **▸ The five LEDs sit in a row at y ≈ 132.2 — the same line as the H4/H5
+  bolts (y ≈ 132.0).** The bottom bracket's field is therefore *not* clear, and
+  it must not sit flat on the board there. It doesn't: the bracket's back plate
+  is carried on the insert bosses, putting its underside at **z = 3.6 mm**,
+  which clears the tallest LED by ≥2.0 mm. **No relief pockets are needed.**
 * The card plane sits at **6.00 mm**, so it clears every tact switch (5.0 mm
-  actuator, 3.45 mm body). **Only the nav (8.00 mm) protrudes — by 2.0 mm.**
+  actuator, 3.45 mm body) and every part above. **Only the nav (8.00 mm)
+  protrudes — by 2.0 mm.**
 * No LCD body footprint exists on the PCB — only the FPC connector J5. The
   module is held mechanically, so its on-board position is a build property.
 
@@ -144,9 +168,16 @@ card top** (±1–2 mm until a flatbed scan refines it).
 
 * **Insert pilot** in the printed boss: size to the 5 mm OD insert; expect
   ~4.0–4.5 mm in PETG — dial on the coupon.
-* **Bolt length**: board 1.6 mm + bar back-plate thickness + insert engagement;
-  pick from 8/12/16/20 mm without bottoming out, and verify the head clears the
-  back-side AAA holder / USB-C / JST.
+* **▸ Use the 6 mm inserts, not the 8 mm.** Available material is exactly the
+  6.00 mm from the board face (z = 0) to the card rest plane (z = 6.00); an 8 mm
+  insert would break through into the board. The insert is installed from the
+  **underside** (the board-facing face), because the top face is the card plane.
+* **▸ Bolt length, and the 0.4 mm overshoot.** An 8 mm M3 bolt passes 1.6 mm of
+  board and then enters 6.4 mm into a 6.0 mm insert — the tip would emerge at the
+  card plane. **Fit a ≈0.5 mm spacer under each head** (the kit has M3 spacers),
+  which pulls the tip back to ≈5.9 mm.
+* **▸ Verify the head clears** the back-side AAA holder / USB-C / JST **with the
+  spacer fitted**, at the chosen length.
 
 ## Geometry analysis
 
@@ -164,6 +195,10 @@ Art-centred on the active area:
 * The card's left edge then overlaps the nav (right edge x 122.6) by **1.94 mm**,
   so **shift the card +1.94 mm right**: centre x → **155.60**. The art centre is
   then 1.94 mm right of the active centre — well inside the ±8 mm budget.
+* **▸ Then shift a further +0.75 mm right**: centre x → **156.35**. The +1.94
+  shift alone leaves the sleeve's left edge at x 122.60, *exactly* flush with
+  the nav's right edge, and the nav protrudes 2 mm above the card plane. The
+  ±8 mm art budget absorbs the extra shift easily.
 * After the shift the right edge is 188.60, overlapping B1 (183.75–190.25) but
   not A1 (192.28+); B1 is below the card plane, so it does not matter.
 
@@ -180,9 +215,14 @@ Art-centred on the active area:
 * **Two bracket bars** fastened into the four M3 heat-set inserts with M3 bolts
   through the board holes. The **back plate is printed into each bar** (common,
   no separate shim), set coplanar with the 6.00 mm glass plane.
-* **Bottom bar** (bolted at H4/H5, out in the 28 mm overhang): closed card stop
-  plus **two screw clamps** (Variant P point pad vs. Variant R short rail) that
-  press the card onto the bar's back plate.
+* **Bottom bar** (bolted at H4/H5): **a short bracket that stays on the board**,
+  not a 28 mm cantilever. Its back plate rides on the two insert bosses, so the
+  underside is at z = 3.6 mm and spans the LED row without touching it (see
+  Front-side parts). **Two screw clamps** (Variant P point pad vs. Variant R
+  short rail) press the card onto the plate at y ≈ 132.2 — blank card, well
+  below the art window's lower edge at y ≈ 119.6, and the whole card width is
+  art-free there. **No bottom-edge stop**: the card's 28 mm overhang simply
+  hangs, which the placement already accepts.
 * **Top bar** (bolted at H2/H3): a **raised bridge** (underside clear of the
   card plane and of SELECT/START) ending in a **hook that captures the card's
   top edge** — the ~1.75 mm overhang plus the card's ~13 mm top margin give a
@@ -211,9 +251,13 @@ Art-centred on the active area:
 
 ## Build plan
 
-1. **Reference geometry** — export the board `Edge_Cuts` to DXF; import the LCD
-   `JD-T18003` STEP; model the card + art window from the derived values; place
-   the active rectangle at centre (153.66, 99.85).
+1. **Reference geometry** — **done** (`cad/`, verified 2026-09-30). Note the
+   Fusion MCP can neither import nor export DXF, so the board outline is
+   **parsed from the `.kicad_pcb` text** by `cad/reference/kicad_extract.py`
+   rather than exported to DXF and re-imported. Card and art window are modelled
+   from the derived values; the active rectangle is at centre (153.66, 99.85).
+   In the model, the origin is the board centre with **+Y up** (KiCad's y is
+   negated) and z = 0 at the board front face.
 2. **Coupon** — posts, insert pilot (4.0–4.5 mm sweep), cradle, one clamp with
    both cartridges; verify insert install, bolt fit, clamp force, art-box keep-out.
 3. **Placement** — set the card as computed (art over active, +1.94 mm right shift).
@@ -224,6 +268,13 @@ Art-centred on the active area:
 ## Open items
 
 1. Confirm the art window against a flatbed scan before treating ≈51 × 33 as final.
-2. Confirm the M3 bolt head clears the back-side parts at the chosen length.
+2. Confirm the M3 bolt head clears the back-side parts **with the ≈0.5 mm spacer
+   fitted**, at the chosen length.
 3. Verify the top-hook grip depth against the card's R3.18 corner radius and the
    top-edge notch (x 151.70 → 158.10).
+4. **▸ Confirm the SK6812MINI height.** The repo's `neopixel.stp` says 0.75 mm;
+   SK6812MINI is commonly ~1.6 mm. The bracket's 3.6 mm underside clears either,
+   so this is a margin question, not a blocker.
+5. **▸ Clamp towers must stand outside the card's footprint** — sleeved card
+   x 120.66 → 186.66, y 70.35 → 164.35 after the shift — and reach inward.
+   Nothing above the card plane may sit inside that rectangle.

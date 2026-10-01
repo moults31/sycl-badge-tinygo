@@ -1,0 +1,21 @@
+{
+  "format": "sycl-card-holder-target/1",
+  "note": [
+    "Which Fusion document build.py builds into.",
+    "",
+    "Fusion documents live in Autodesk's cloud: there is no local live .f3d, and",
+    "Save As to disk is not available. So the document is scratch state, not an",
+    "asset. This file names it; the tracked text (parameters.json, build.py,",
+    "reference/board.json) remains the source of truth, and the document can be",
+    "deleted and rebuilt at any time.",
+    "",
+    "build.py refuses to run unless the *active* document's name matches `name`,",
+    "so a rebuild cannot accidentally land in the wrong document. Set project",
+    "only to document which hub project it lives in; it is informational.",
+    "",
+    "Because the document is shared globally, two worktrees must not build into",
+    "it at the same time -- the script clears its own features before redrawing."
+  ],
+  "project": null,
+  "name": "card-holder"
+}
