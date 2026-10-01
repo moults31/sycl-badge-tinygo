@@ -238,9 +238,15 @@ Art-centred on the active area:
   model, and no PETG thread to creep. (Was: a printed PETG thumb thread.)
 * **▸ Towers stand outside the card.** The sleeved card occupies x 120.66–186.66,
   y 70.35–164.35, so nothing above the card plane may sit inside it. Each tower
-  is at x ≈ −41 / +45, with an arm reaching inward to a clamp axis at x ≈ −25 /
-  +34 — on the sleeve, and outside the art box. Towers reach z = 16.7 mm, which
-  is the price of an 8 mm arm plus an 8 mm stock bolt; trimming bolts would halve it.
+  is at x ≈ −41 / +45, with an arm reaching inward to a clamp axis at x ≈ −19.1 /
+  +28.9 (model coords) — symmetric about the card centre and 48 mm apart, so two
+  clamps resist card rotation. Towers reach z = 16.7 mm, which is the price of an
+  8 mm arm plus an 8 mm stock bolt; trimming bolts would halve it.
+* **▸ The clamp contact is below the art window, not beside it.** At the clamp Y
+  the whole card width is blank, so the "outside the art box" test is a 2D one —
+  the clamp only has to be outside the art *rectangle*, not outside its X range.
+  That frees the axes to sit symmetrically, which is what makes a rail-length
+  contact fit on the sleeve.
 * **▸ Swappable cartridge** is a loose Ø14 × 2 mm disc. Its compliant pad stands
   0.2 mm below the rigid rim, so the rim bottoms on the card and bounds the
   squeeze at `clamp_stop_z` = 6.2 mm. Still to add: a spigot/dimple coupling to
@@ -307,4 +313,6 @@ Still open:
    two bosses, so each has a ~100 mm unsupported span at its underside. Expect to
    need support material, or print on a different axis. A print-orientation
    decision is still outstanding.
-6. **A/B:** point pad vs. short rail cartridge — not yet decided.
+6. **A/B:** point pad vs. short rail cartridge — **both are now modelled**
+   (`BRK_cart_*` and `BRK_rail_*`), so the comparison is a print and a feel, not
+   a redesign. Pick one per side after testing.

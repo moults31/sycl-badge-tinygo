@@ -89,10 +89,14 @@ Seven bodies in one document, all regenerated from the tracked text:
 | body | what |
 | --- | --- |
 | `BRK_bottom` | back plate on two Ø8 insert bosses at H4/H5, two clamp towers with arms |
-| `BRK_cart_l` / `BRK_cart_r` | swappable cartridges, Ø14 × 2, compliant pad 0.2 mm proud of the rigid rim |
+| `BRK_cart_l` / `BRK_cart_r` | point-pad cartridges, Ø14 × 2, compliant pad 0.2 mm proud of the rigid rim |
+| `BRK_rail_l` / `BRK_rail_r` | rail cartridges, the A/B alternative: a line contact instead of a point |
 | `BRK_knob_l` / `BRK_knob_r` | printed thumb knobs, hex pocket gripping the bolt head |
 | `BRK_top` | top bar at H2/H3: bosses, raised bridge, edge hook |
 | `BRK_coupon` | fit-check coupon: six insert-pilot bosses sweeping 4.0–4.5 mm |
+
+Nine bodies: the two cartridges and the two knobs are per-side parts, and the
+pad and rail cartridges are alternatives — print both, pick one per side.
 
 `build.py` also runs clearance checks against the extracted board data — nav,
 LED, LCD module, tower/art-box placement, hook capture, bolt-tip depth, and

@@ -488,8 +488,17 @@ def checks(g: dict, v: dict) -> list[str]:
     for label, cx in (("left", v["clamp_x_l"]), ("right", v["clamp_x_r"])):
         need(f"{label} clamp on the sleeve", sleeve_x[0] < cx < sleeve_x[1],
              f"clamp x={cx:.2f} is off the sleeve")
-        need(f"{label} clamp outside the art box", not (art_x[0] < cx < art_x[1]),
-             f"clamp x={cx:.2f} is inside the art window x {art_x[0]:.2f}..{art_x[1]:.2f}")
+        clamp_y = (v["bar_y0"] + v["bar_y1"]) / 2.0
+        inside_art = (art_x[0] < cx < art_x[1]) and (g["art"]["y"][0] < clamp_y < g["art"]["y"][1])
+        need(f"{label} clamp outside the art box", not inside_art,
+             f"clamp ({cx:.2f}, {clamp_y:.2f}) is inside the art window "
+             f"x {art_x[0]:.2f}..{art_x[1]:.2f} y {g['art']['y'][0]:.2f}..{g['art']['y'][1]:.2f}")
+
+    for label, cx in (("left", v["clamp_x_l"]), ("right", v["clamp_x_r"])):
+        half = v["rail_body_len"] / 2.0
+        need(f"{label} rail stays on the sleeve",
+             sleeve_x[0] <= cx - half and cx + half <= sleeve_x[1],
+             f"rail spans {cx - half:.2f}..{cx + half:.2f} vs sleeve {sleeve_x[0]:.2f}..{sleeve_x[1]:.2f}")
 
     bridge_bot = v["card_face_z"] + v["bridge_clear"]
     need("bridge clears the tacts", bridge_bot > v["tact_actuator_z"],
@@ -527,6 +536,19 @@ def checks(g: dict, v: dict) -> list[str]:
          f"tip z={clamp_tip:.2f} vs insert bottom z={arm_top - v['insert_len']:.2f}")
 
     return bad
+
+
+def _centring_dimple(root, tag, cx, cy, v, top_z):
+    """A shallow pocket in a cartridge's top face to centre the bolt tip."""
+    from adsk.fusion import FeatureOperations as FO
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "dimple_" + tag,
+                       _offset_plane(root, PLANE_HOLDER + "dimple" + tag,
+                                     top_z - v["dimple_depth"]))
+    sk.sketchCurves.sketchCircles.addByCenterRadius(
+        _pt(cx, cy), (v["m3_shank_d"] / 2.0 + 0.1) * CM_PER_MM)
+    _extrude(root, sk, FO.CutFeatureOperation, v["dimple_depth"] + 0.1,
+             BODY_PREFIX + "dimple" + tag + "_cut")
 
 
 def build_holder(root, g: dict, v: dict) -> dict:
@@ -639,13 +661,7 @@ def build_holder(root, g: dict, v: dict) -> dict:
                  BODY_PREFIX + "crelief" + tag + "_cut", largest_only=True)
 
         # centring dimple for the (bought) bolt tip
-        sk = _fresh_sketch(root, BODY_PREFIX + "cdimple_" + tag,
-                           _offset_plane(root, PLANE_HOLDER + "cdimple" + tag,
-                                         cart_top - v["dimple_depth"]))
-        sk.sketchCurves.sketchCircles.addByCenterRadius(
-            _pt(cx, clamp_y), (v["m3_shank_d"] / 2.0 + 0.1) * CM_PER_MM)
-        _extrude(root, sk, FO.CutFeatureOperation, v["dimple_depth"] + 0.1,
-                 BODY_PREFIX + "cdimple" + tag + "_cut")
+        _centring_dimple(root, "cart_" + tag, cx, clamp_y, v, cart_top)
 
     # Printed thumb knobs. A hex pocket grips the bolt head so the knob drives
     # it; the knob is its own printed part and simply lifts off.
@@ -663,6 +679,31 @@ def build_holder(root, g: dict, v: dict) -> dict:
         _hex(sk, cx, clamp_y, v["knob_pocket_af"])
         _extrude(root, sk, FO.CutFeatureOperation, v["knob_pocket_depth"],
                  BODY_PREFIX + "kpocket" + tag + "_cut")
+
+    # Rail cartridge variant (A/B against the point pad). Same compliant-pad
+    # idea, but a line contact instead of a point, so the card resists rotating
+    # about a clamp axis. Printed as extra bodies; pick one per side.
+    for tag, _tw, _a, cx in sides:
+        half_l = v["rail_body_len"] / 2.0
+        half_w = v["rail_body_w"] / 2.0
+        sk = _fresh_sketch(root, BODY_PREFIX + "rail_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "rail" + tag, v["card_face_z"]))
+        _xy_rect(sk, {"x": (cx - half_l, cx + half_l), "y": (clamp_y - half_w, clamp_y + half_w)})
+        feat = _extrude(root, sk, FO.NewBodyFeatureOperation, v["cartridge_h"],
+                        BODY_PREFIX + "rail" + tag + "_body")
+        feat.bodies.item(0).name = BODY_PREFIX + "rail_" + tag
+
+        # ring cut between two nested rectangles leaves the rail pad proud
+        phl, phw = v["rail_len"] / 2.0, v["rail_w"] / 2.0
+        sk = _fresh_sketch(root, BODY_PREFIX + "railrelief_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "railrelief" + tag, v["card_face_z"]))
+        _xy_rect(sk, {"x": (cx - half_l - 1.0, cx + half_l + 1.0),
+                      "y": (clamp_y - half_w - 1.0, clamp_y + half_w + 1.0)})
+        _xy_rect(sk, {"x": (cx - phl, cx + phl), "y": (clamp_y - phw, clamp_y + phw)})
+        _extrude(root, sk, FO.CutFeatureOperation, v["pad_protrusion"],
+                 BODY_PREFIX + "railrelief" + tag + "_cut", largest_only=True)
+
+        _centring_dimple(root, "rail_" + tag, cx, clamp_y, v, cart_top)
 
     return {"body": body.name, "boss_od": boss_od, "boss_h": boss_h,
             "half_x": half_x, "bar_y": plate_y, "arm_bot": arm_bot,

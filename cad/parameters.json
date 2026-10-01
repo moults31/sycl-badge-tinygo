@@ -86,8 +86,8 @@
       {"name": "bar_y1", "expression": "-21.0 mm", "status": "provisional", "comment": "bottom bracket front edge Y; clears the LCD module, whose lower edge is about -18.66"}
     ],
     "clamp": [
-      {"name": "clamp_x_l", "expression": "-25.0 mm", "status": "provisional", "comment": "left clamp axis X; on the sleeve (left edge -28.06) and outside the art box (art left -21.31)"},
-      {"name": "clamp_x_r", "expression": "34.0 mm", "status": "provisional", "comment": "right clamp axis X; on the sleeve (right edge 37.94) and outside the art box (art right 29.69)"},
+      {"name": "clamp_x_l", "expression": "card_cx - 24 mm", "status": "provisional", "comment": "left clamp axis X, symmetric about the card centre; the contact is below the art window so only the rectangle matters, and the clamp is on the sleeve"},
+      {"name": "clamp_x_r", "expression": "card_cx + 24 mm", "status": "provisional", "comment": "right clamp axis X, symmetric about the card centre; 48 mm apart so two clamps resist card rotation"},
       {"name": "tower_x_l", "expression": "-41.0 mm", "status": "provisional", "comment": "left tower centre X; clear of the sleeve's left edge so nothing above the card plane intersects the card"},
       {"name": "tower_x_r", "expression": "45.0 mm", "status": "provisional", "comment": "right tower centre X; clear of the sleeve's right edge"},
       {"name": "tower_w", "expression": "8.0 mm", "status": "provisional", "comment": "tower width along X; the arm is the same width and reaches inward to the clamp"},
@@ -103,7 +103,11 @@
       {"name": "knob_od", "expression": "16.0 mm", "status": "provisional", "comment": "printed thumb knob diameter"},
       {"name": "knob_h", "expression": "8.0 mm", "status": "provisional", "comment": "printed thumb knob height above the arm's top face"},
       {"name": "knob_pocket_af", "expression": "5.8 mm", "status": "provisional", "comment": "hex pocket across flats, sized to grip the M3 socket-cap head (5.5 across flats)"},
-      {"name": "knob_pocket_depth", "expression": "3.2 mm", "status": "provisional", "comment": "hex pocket depth; the head is 3.0 tall"}
+      {"name": "knob_pocket_depth", "expression": "3.2 mm", "status": "provisional", "comment": "hex pocket depth; the head is 3.0 tall"},
+      {"name": "rail_body_len", "expression": "16.0 mm", "status": "provisional", "comment": "rail cartridge variant: body length along X. At the symmetric clamp axes a 16 mm body stays on the sleeve with margin"},
+      {"name": "rail_body_w", "expression": "10.0 mm", "status": "provisional", "comment": "rail cartridge variant: body width along Y"},
+      {"name": "rail_len", "expression": "12.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad length, standing 0.2 mm proud of the rim"},
+      {"name": "rail_w", "expression": "4.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad width"}
     ],
     "top_bar": [
       {"name": "bridge_clear", "expression": "0.4 mm", "status": "provisional", "comment": "gap from the card plane to the top bridge's underside; the bridge must clear the card AND the START/SELECT actuators, which stand 5.0 mm proud"},
