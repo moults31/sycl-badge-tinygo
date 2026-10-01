@@ -84,6 +84,11 @@ type CardShow struct {
 	flash uint32
 	spks  []spark
 
+	// breathe toggles the always-on breathing envelope (both the per-pixel
+	// dimming and the backlight pulse). Some look modes read better with a
+	// steady, unmodulated image; Click toggles the mapping, B toggles this.
+	breathe bool
+
 	// colorMap selects how the finished frame is mapped onto the panel's
 	// colour order; Click cycles it (see the cardColorMap constants).
 	colorMap cardColorMap
@@ -196,6 +201,7 @@ func (c *CardShow) Start(p *Platform) {
 	c.calib = false
 	c.colorMap = colorRGB
 	c.mapToast = 0
+	c.breathe = true
 
 	c.list = c.library
 	if len(c.list) == 0 {
@@ -291,6 +297,12 @@ func (c *CardShow) Update(p *Platform) {
 		c.colorMap = (c.colorMap + 1) % colorMapCount
 		c.mapToast = cardMapToastFrames
 	}
+	// B toggles the breathing envelope; it works in the lightshow and the
+	// calibration overlay both.
+	if pressed(p.buttons.B, p.prev.B) && !c.calib {
+		c.breathe = !c.breathe
+		c.mapToast = cardMapToastFrames
+	}
 	if pressed(p.buttons.A, p.prev.A) && !c.calib {
 		c.flash = cardFlashFrames
 	}
@@ -353,7 +365,8 @@ func (c *CardShow) render(p *Platform) {
 		return
 	}
 
-	// Breathing envelope 0..255, ~3 s at 60 fps.
+	// Breathing envelope 0..255, ~3 s at 60 fps. When toggled off, bf is a
+	// flat 255 (full-bright art) and the backlight holds steady.
 	breath := int(c.sin[(int(c.t)*256/180)&255])
 	bf := 170 + breath*85/255
 
@@ -363,7 +376,16 @@ func (c *CardShow) render(p *Platform) {
 	// Global intensity breathing through the backlight PWM; the flash pins it
 	// to full. Per-pixel breathing (bf) is softer so the two don't compound
 	// into an obvious square wave.
+	//
+	// When breathing is off, bf holds at full and the backlight goes to full
+	// rather than a fixed intermediate duty: the TPS61041 boost only lights
+	// predictably at full duty (an intermediate duty drifts, see the README's
+	// backlight notes), so "steady" means "full".
 	bl := 150 + breath*105/255
+	if !c.breathe {
+		bf = 255
+		bl = 255
+	}
 	if fl > 0 {
 		bl = 255
 	}
@@ -449,9 +471,13 @@ func (c *CardShow) render(p *Platform) {
 	c.applyColorMap(fb, c.colorMap)
 }
 
-// drawMapToast briefly names the active colour mapping after a click cycle.
+// drawMapToast briefly names the active colour mapping and breathing state
+// after a click cycle or a B toggle.
 func (c *CardShow) drawMapToast(p *Platform) {
 	name := "CMAP " + cardColorNames[c.colorMap]
+	if !c.breathe {
+		name += " NO-BREATHE"
+	}
 	p.drawText(3, 3, name, RGB565(0xFF, 0xFF, 0x00), RGB565(0x00, 0x00, 0x00))
 }
 

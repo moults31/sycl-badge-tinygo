@@ -134,7 +134,7 @@ firmware still bakes its cards at build time through `make build`/`card-data`, s
 both use one generator. In CARD SHOW, **left/right (or A/D) cycle the loaded cards**;
 Select's overlay shows the current name and `n/total` index, and the stick
 **click** cycles the output colour mapping (`RGB`/`BGR`/`SWAP16`/`BGR+SWAP16`/
-`HUE`/`OIL`/`FLUX`/`FOIL`/`TINT`/`VIVID`;
+`HUE`/`OIL`/`FLUX`/`FOIL`/`TINT`/`VIVID`) and **B** toggles breathing;
 see [Red and blue came out swapped](#red-and-blue-came-out-swapped-on-real-hardware)).
 
 Extra flags pass through, e.g.
@@ -183,7 +183,16 @@ through the backlight PWM. **Left/Right** cycle the baked card library;
 **Select** toggles the alignment overlay (which shows the card name and its
 `n/total` library index); **A** fires the attack flash; the joystick **Click**
 cycles the output colour mapping (`RGB`, `BGR`, `SWAP16`, `BGR+SWAP16`, `HUE`,
-`OIL`, `FLUX`, `FOIL`, `TINT`, `VIVID`) with a short on-screen label.
+`OIL`, `FLUX`, `FOIL`, `TINT`, `VIVID`) with a short on-screen label; **B**
+toggles the breathing envelope.
+
+**B** turns the always-on breathing off. It is the one effect that fights some
+of the look modes: `HUE`/`FLUX`/`FOIL`/`TINT` already move colour continuously,
+and stacking a brightness pulse on top muddies them, while `VIVID` is better
+compared against a steady frame. Off means per-pixel breathing holds at full and
+the backlight goes to full and stays there (the boost converter only lights
+predictably at full duty, so a fixed intermediate duty would drift — see the
+backlight notes below).
 
 Because diffusion washes out fine detail, each asset is tiny (a 4-bit mask
 stretched across the panel and bilinearly upscaled). Assets are **generated at
