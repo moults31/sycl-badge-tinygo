@@ -80,6 +80,21 @@
       {"name": "bar_inset", "expression": "2.0 mm", "status": "provisional", "comment": "how far the bracket's ends sit inboard of the board edge"},
       {"name": "bar_y0", "expression": "-31.5 mm", "status": "provisional", "comment": "bottom bracket rear edge Y: below the art window (-15.5) so it is on the card's blank margin, and above the board edge (-32.007) so it stays supported"},
       {"name": "bar_y1", "expression": "-21.0 mm", "status": "provisional", "comment": "bottom bracket front edge Y; clears the LCD module, whose lower edge is about -18.66"}
+    ],
+    "clamp": [
+      {"name": "clamp_x_l", "expression": "-25.0 mm", "status": "provisional", "comment": "left clamp axis X; on the sleeve (left edge -28.06) and outside the art box (art left -21.31)"},
+      {"name": "clamp_x_r", "expression": "34.0 mm", "status": "provisional", "comment": "right clamp axis X; on the sleeve (right edge 37.94) and outside the art box (art right 29.69)"},
+      {"name": "tower_x_l", "expression": "-41.0 mm", "status": "provisional", "comment": "left tower centre X; clear of the sleeve's left edge so nothing above the card plane intersects the card"},
+      {"name": "tower_x_r", "expression": "45.0 mm", "status": "provisional", "comment": "right tower centre X; clear of the sleeve's right edge"},
+      {"name": "tower_w", "expression": "8.0 mm", "status": "provisional", "comment": "tower width along X; the arm is the same width and reaches inward to the clamp"},
+      {"name": "arm_end_over", "expression": "6.0 mm", "status": "provisional", "comment": "how far the arm runs past the clamp axis, so the insert has material all round"},
+      {"name": "arm_thk", "expression": "8.0 mm", "status": "provisional", "comment": "arm thickness; deliberately equal to bolt_shank so a stock bolt's tip lands at the arm's underside"},
+      {"name": "arm_clear", "expression": "0.3 mm", "status": "provisional", "comment": "gap between the arm's underside and the cartridge top at rest"},
+      {"name": "cartridge_h", "expression": "2.0 mm", "status": "provisional", "comment": "cartridge height from its contact face to its top"},
+      {"name": "cartridge_od", "expression": "14.0 mm", "status": "provisional", "comment": "cartridge diameter; loose and swappable, so it needs no socket"},
+      {"name": "pad_od", "expression": "6.0 mm", "status": "provisional", "comment": "compliant pad diameter; the pad is the only part that touches the card"},
+      {"name": "pad_protrusion", "expression": "0.2 mm", "status": "provisional", "comment": "how far the pad stands below the rigid rim; the rim then bottoms on the card and bounds the squeeze, giving clamp_stop_z"},
+      {"name": "bolt_shank", "expression": "8.0 mm", "status": "verified", "comment": "kit's shortest M3 socket cap; with arm_thk 8.0 the tip lands 0.3 mm above the cartridge"}
     ]
   }
 }

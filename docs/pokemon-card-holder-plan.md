@@ -24,7 +24,7 @@ mount.
 | Retention | **Screw clamp with friction lock**: a loose nominal cradle sets rough placement, printed thumb-screw clamps take up the slack and lock it (fine trim, a few mm / ~2°) |
 | Clamp contact | **Over the card face (through the stack)**, confined to the outer margin **outside the art box** |
 | Clamp cartridges | **Swappable** contact elements — point pad vs. short rail — evaluated on a coupon |
-| Clamp material | **Printed thumb thread**, PETG (threads and compliant face); PLA/PETG for the rigid bars — **no TPU on hand** |
+| Clamp material | **▸ M3 heat-set insert + stock M3 socket-cap bolt** in the arm (changed from a printed PETG thumb thread, 2026-09-30); PETG for the compliant face; PLA/PETG for the rigid bars — **no TPU on hand** |
 | Over-torque control | Printed **PETG flexure face** + a hard **travel stop** (~stack − 0.2 mm) |
 | Card plane | **Flush on the LCD glass** (no shroud) |
 
@@ -231,9 +231,20 @@ Art-centred on the active area:
   constrain translation and rotation.
 * **Clamp contact** stays in the card's outer margin, **outside the art box**
   (side bands ≈6 mm, top zone ≈13 mm, bottom margin ≈43 mm).
-* **Thumb screws** are printed (PETG), with a swivel spigot driving a swappable
-  cartridge. The cartridge ends in a **PETG flexure face** with a **hard travel
-  stop** (~stack − 0.2 mm) to bound force without TPU.
+* **▸ Clamp screws are bought, not printed.** A **6 mm M3 heat-set insert** goes
+  into an 8 mm-thick arm, bored from its top face; a **stock M3 × 8 mm socket-cap
+  bolt** drives it. `arm_thk` equals the bolt's shank, so the tip lands exactly
+  at the arm's underside, 0.3 mm above the cartridge — no trimming, no helix to
+  model, and no PETG thread to creep. (Was: a printed PETG thumb thread.)
+* **▸ Towers stand outside the card.** The sleeved card occupies x 120.66–186.66,
+  y 70.35–164.35, so nothing above the card plane may sit inside it. Each tower
+  is at x ≈ −41 / +45, with an arm reaching inward to a clamp axis at x ≈ −25 /
+  +34 — on the sleeve, and outside the art box. Towers reach z = 16.7 mm, which
+  is the price of an 8 mm arm plus an 8 mm stock bolt; trimming bolts would halve it.
+* **▸ Swappable cartridge** is a loose Ø14 × 2 mm disc. Its compliant pad stands
+  0.2 mm below the rigid rim, so the rim bottoms on the card and bounds the
+  squeeze at `clamp_stop_z` = 6.2 mm. Still to add: a spigot/dimple coupling to
+  the bolt tip, and a printed thumb knob (a hex key drives v1).
 * A loose **cradle** (bottom ledge + light side references) sets nominal
   placement; clamps take up the slack.
 * **No side walls.** Slide clearance ~0.3–0.4 mm/side until the coupon says otherwise.

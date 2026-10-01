@@ -363,20 +363,26 @@ def _glass_plane(root, z_mm):
     return _offset_plane(root, PLANE_GLASS, z_mm)
 
 
-def _profiles(sk):
+def _profiles(sk, largest_only=False):
     import adsk.core
 
+    profiles = [sk.profiles.item(i) for i in range(sk.profiles.count)]
+    if largest_only:
+        # A sketch with two concentric circles yields the inner disc (one loop)
+        # and the annulus around it (two loops). Loop count is the reliable
+        # discriminator; Profile has no .area.
+        profiles = [max(profiles, key=lambda p: p.profileLoops.count)]
     coll = adsk.core.ObjectCollection.create()
-    for i in range(sk.profiles.count):
-        coll.add(sk.profiles.item(i))
+    for p in profiles:
+        coll.add(p)
     return coll
 
 
-def _extrude(root, sk, operation, distance_mm, name):
+def _extrude(root, sk, operation, distance_mm, name, largest_only=False):
     import adsk.core
 
     ex = root.features.extrudeFeatures
-    inp = ex.createInput(_profiles(sk), operation)
+    inp = ex.createInput(_profiles(sk, largest_only), operation)
     inp.setDistanceExtent(False, adsk.core.ValueInput.createByString(f"{distance_mm} mm"))
     feat = ex.add(inp)
     feat.name = name
@@ -450,8 +456,83 @@ def build_holder(root, g: dict, v: dict) -> dict:
         circles.addByCenterRadius(_pt(*hole[ref]["at"]), (v["insert_pilot_d"] / 2.0) * CM_PER_MM)
     _extrude(root, sk, FO.CutFeatureOperation, v["glass_z"] + 1.0, BODY_PREFIX + "pilots_cut")
 
+    # --- clamp towers, arms and cartridges -----------------------------------
+    #
+    # Each tower stands OUTSIDE the card's X range, because nothing above the
+    # card plane may intersect the card; its arm then reaches inward over the
+    # card's blank lower margin. arm_thk equals the kit's 8 mm bolt shank, so a
+    # stock bolt's tip lands exactly at the arm's underside.
+    cart_top = v["card_face_z"] + v["cartridge_h"]
+    arm_bot = cart_top + v["arm_clear"]
+    arm_top = arm_bot + v["arm_thk"]
+    plate_y = (v["bar_y0"], v["bar_y1"])
+    clamp_y = sum(plate_y) / 2.0
+    half_w = v["tower_w"] / 2.0
+    glass_plane = root.constructionPlanes.itemByName(PLANE_GLASS)
+
+    sides = []
+    for tag, tower_x, clamp_x in (("l", v["tower_x_l"], v["clamp_x_l"]),
+                                 ("r", v["tower_x_r"], v["clamp_x_r"])):
+        sign = 1.0 if clamp_x > tower_x else -1.0
+        tower = (tower_x - half_w, tower_x + half_w)
+        arm = tuple(sorted((tower_x - sign * half_w, clamp_x + sign * v["arm_end_over"])))
+        sides.append((tag, tower, arm, clamp_x))
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "towers", glass_plane)
+    sk.isComputeDeferred = True
+    for _t, tower, _a, _cx in sides:
+        _xy_rect(sk, {"x": tower, "y": plate_y})
+    sk.isComputeDeferred = False
+    _extrude(root, sk, FO.JoinFeatureOperation, arm_top - v["glass_z"], BODY_PREFIX + "towers_ext")
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "arms", _offset_plane(root, PLANE_HOLDER + "arm", arm_bot))
+    for _t, _tw, arm, _cx in sides:
+        _xy_rect(sk, {"x": arm, "y": plate_y})
+    _extrude(root, sk, FO.JoinFeatureOperation, v["arm_thk"], BODY_PREFIX + "arms_ext")
+
+    # bolt clearance straight through, then the insert seat bored from the top
+    sk = _fresh_sketch(root, BODY_PREFIX + "bolts",
+                       _offset_plane(root, PLANE_HOLDER + "bolt", arm_bot))
+    for _t, _tw, _a, cx in sides:
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            _pt(cx, clamp_y), (v["m3_shank_d"] / 2.0 + 0.2) * CM_PER_MM)
+    _extrude(root, sk, FO.CutFeatureOperation, v["arm_thk"] + 1.0, BODY_PREFIX + "bolts_cut")
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "seats",
+                       _offset_plane(root, PLANE_HOLDER + "seat", arm_top - v["insert_len"]))
+    for _t, _tw, _a, cx in sides:
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            _pt(cx, clamp_y), (v["insert_pilot_d"] / 2.0) * CM_PER_MM)
+    _extrude(root, sk, FO.CutFeatureOperation, v["insert_len"] + 0.1, BODY_PREFIX + "seats_cut")
+
+    # Cartridges: one body each. The compliant pad is left standing 0.2 mm below
+    # the rigid rim by cutting the ring around it, so the rim bottoms on the card
+    # and bounds the squeeze. Loose and swappable, so no socket is needed.
+    #
+    # Note: a Join extrude unions DISJOINT bodies too, so building the pad and
+    # the rim as two bodies and joining them silently welds the cartridge into
+    # BRK_bottom. One body per cartridge, or Fusion decides the target for us.
+    for tag, _tw, _a, cx in sides:
+        sk = _fresh_sketch(root, BODY_PREFIX + "cart_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "cart" + tag, v["card_face_z"]))
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            _pt(cx, clamp_y), (v["cartridge_od"] / 2.0) * CM_PER_MM)
+        feat = _extrude(root, sk, FO.NewBodyFeatureOperation, v["cartridge_h"],
+                        BODY_PREFIX + "cart" + tag + "_body")
+        feat.bodies.item(0).name = BODY_PREFIX + "cart_" + tag
+
+        sk = _fresh_sketch(root, BODY_PREFIX + "crelief_" + tag,
+                           _offset_plane(root, PLANE_HOLDER + "crelief" + tag, v["card_face_z"]))
+        circles = sk.sketchCurves.sketchCircles
+        circles.addByCenterRadius(_pt(cx, clamp_y), (v["pad_od"] / 2.0) * CM_PER_MM)
+        circles.addByCenterRadius(_pt(cx, clamp_y), (v["cartridge_od"] / 2.0 + 1.0) * CM_PER_MM)
+        _extrude(root, sk, FO.CutFeatureOperation, v["pad_protrusion"],
+                 BODY_PREFIX + "crelief" + tag + "_cut", largest_only=True)
+
     return {"body": body.name, "boss_od": boss_od, "boss_h": boss_h,
-            "half_x": half_x, "bar_y": (v["bar_y0"], v["bar_y1"])}
+            "half_x": half_x, "bar_y": plate_y, "arm_bot": arm_bot,
+            "arm_top": arm_top, "cart_top": cart_top,
+            "cartridges": [BODY_PREFIX + "cart_" + t for t, _tw, _a, _cx in sides]}
 
 
 def export_snapshots(design, root, repo) -> list:
@@ -559,6 +640,12 @@ def run(_ctx):
           f"Y {bb.minPoint.y * MM_PER_CM:+.3f} .. {bb.maxPoint.y * MM_PER_CM:+.3f}  "
           f"Z {bb.minPoint.z * MM_PER_CM:+.3f} .. {bb.maxPoint.z * MM_PER_CM:+.3f}")
     print(f"  volume {body.volume:.3f} cm^3 ({body.volume * 1000:.0f} mm^3)")
+    tip = holder["arm_top"] - vals["bolt_shank"]
+    print(f"  clamp: cartridge top z={holder['cart_top']:.2f}, "
+          f"arm {holder['arm_bot']:.2f}..{holder['arm_top']:.2f}, "
+          f"bolt tip z={tip:.2f} (gap {tip - holder['cart_top']:+.2f})")
+    print(f"  bodies ({root.bRepBodies.count}): "
+          + ", ".join(root.bRepBodies.item(i).name for i in range(root.bRepBodies.count)))
     print()
     export_snapshots(design, root, repo)
 
