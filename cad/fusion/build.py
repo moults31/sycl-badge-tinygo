@@ -53,6 +53,15 @@ PLANE_GLASS = "PL_glass"
 BODY_PREFIX = "BRK_"
 PLANE_HOLDER = "PL_brk_"
 
+# The clamp thread is printed, per the plan. Fusion's ISO Metric Trapezoidal
+# table offers only TR8x1.5 for a nominal 8 mm, so the plan's "coarse 2.5-3 mm
+# pitch" would mean TR12x3 and a much wider arm. TR8x1.5 is the same trapezoidal
+# form, just finer; it is coarser and stronger-rooted than M8x1.25.
+THREAD_TYPE = "ISO Metric Trapezoidal Threads"
+THREAD_DES = "TR8x1.5"
+THREAD_CLASS_EXT = "7e"
+THREAD_CLASS_INT = "7H"
+
 
 # ---------------------------------------------------------------- repo / inputs
 
@@ -541,13 +550,26 @@ def checks(g: dict, v: dict) -> list[str]:
          f"tip z={mount_tip:.2f} vs insert 0..{v['insert_len']:.2f} "
          f"(shank {v['bolt_shank']:.2f}, board {v['board_thk']:.2f}, spacer {v['bolt_spacer']:.2f})")
 
-    arm_top = v["card_face_z"] + v["cartridge_h"] + v["arm_clear"] + v["arm_thk"]
+    # The printed clamp screw: thread engagement in the arm at both ends of its
+    # travel, and the spigot never preloading the cartridge.
+    arm_bot = v["card_face_z"] + v["cartridge_h"] + v["arm_clear"]
+    arm_top = arm_bot + v["arm_thk"]
     cart_top = v["card_face_z"] + v["cartridge_h"]
-    clamp_tip = arm_top - v["bolt_shank"]
-    need("clamp bolt tip does not preload the cartridge", clamp_tip >= cart_top,
-         f"tip z={clamp_tip:.2f} vs cartridge top {cart_top:.2f}")
-    need("clamp bolt reaches through the insert", clamp_tip <= arm_top - v["insert_len"],
-         f"tip z={clamp_tip:.2f} vs insert bottom z={arm_top - v['insert_len']:.2f}")
+    shank = v["screw_thread_len"] + v["screw_spigot_len"]
+    tip_open = cart_top + v["clamp_travel"]
+    tip_clamped = cart_top - v["pad_protrusion"]
+    for label, tip in (("at rest", tip_open), ("clamped", tip_clamped)):
+        lo, hi = tip + v["screw_spigot_len"], tip + shank
+        engage = min(hi, arm_top) - max(lo, arm_bot)
+        need(f"clamp thread engaged {label}", engage >= 4.0,
+             f"only {engage:.2f} mm of {THREAD_DES} sits in the arm "
+             f"({arm_bot:.2f}..{arm_top:.2f}) {label}")
+    need("spigot clears the cartridge at rest", tip_open >= cart_top,
+         f"spigot tip z={tip_open:.2f} vs cartridge top {cart_top:.2f}")
+    need("the rim stop is the squeeze limit",
+         abs((v["card_face_z"] - v["pad_protrusion"]) - v["clamp_stop_z"]) < 0.01,
+         f"rim bottoms on the card at z={v['card_face_z'] - v['pad_protrusion']:.2f}, "
+         f"clamp_stop_z is {v['clamp_stop_z']:.2f}")
 
     return bad
 
@@ -563,6 +585,110 @@ def _centring_dimple(root, tag, cx, cy, v, top_z):
         _pt(cx, cy), (v["m3_shank_d"] / 2.0 + 0.1) * CM_PER_MM)
     _extrude(root, sk, FO.CutFeatureOperation, v["dimple_depth"] + 0.1,
              BODY_PREFIX + "dimple" + tag + "_cut")
+
+
+def _top_face_at(body, z_mm, x_mm, y_mm):
+    """The upward-facing planar face at z whose extent covers (x, y), or None."""
+    import adsk.core
+
+    for i in range(body.faces.count):
+        fc = body.faces.item(i)
+        if fc.geometry.surfaceType != adsk.core.SurfaceTypes.PlaneSurfaceType:
+            continue
+        if fc.geometry.normal.z < 0.99:
+            continue
+        bb = fc.boundingBox
+        if abs(bb.minPoint.z * MM_PER_CM - z_mm) > 0.01:
+            continue
+        if (bb.minPoint.x * MM_PER_CM <= x_mm <= bb.maxPoint.x * MM_PER_CM
+                and bb.minPoint.y * MM_PER_CM <= y_mm <= bb.maxPoint.y * MM_PER_CM):
+            return fc
+    return None
+
+
+def _tapped_hole(root, body, name, x, y, z_mm, v, depth_mm):
+    """A printed internal thread: a tapped hole bored down from a top face.
+
+    The tap drill is derived (major - pitch = the TR8x1.5 minor) rather than
+    typed in. Fusion models the thread physically only with isModeled.
+
+    The depth is bounded rather than through-all on purpose: through-all follows
+    every lump under the axis, and the plate sits 2.7 mm below the arm, where a
+    1.5 mm-pitch thread has nowhere near enough material. Fusion rejects that
+    with THREAD_REFERENCE_FACE_OFFSET_FAILED.
+    """
+    import adsk.core
+
+    face = _top_face_at(body, z_mm, x, y)
+    if face is None:
+        raise RuntimeError(f"{name}: no upward face at z={z_mm} covering ({x}, {y})")
+    info = adsk.fusion.ThreadInfo.create(False, True, THREAD_TYPE, THREAD_DES,
+                                         THREAD_CLASS_INT, True)
+    hf = root.features.holeFeatures
+    inp = hf.createSimpleInput(adsk.core.ValueInput.createByString(
+        f"{v['thread_major'] - v['thread_pitch']} mm"))
+    inp.setPositionByPoint(face, adsk.core.Point3D.create(
+        x * CM_PER_MM, y * CM_PER_MM, z_mm * CM_PER_MM))
+    inp.setDistanceExtent(adsk.core.ValueInput.createByString(f"{depth_mm} mm"))
+    inp.setToTappedHole(info)
+    inp.isModeled = True
+    feat = hf.add(inp)
+    feat.name = name
+    return feat
+
+
+def _external_thread(root, body, name, v):
+    """A modeled external trapezoidal thread on the body's one cylindrical face."""
+    import adsk.core
+
+    faces = adsk.core.ObjectCollection.create()
+    for i in range(body.faces.count):
+        if body.faces.item(i).geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType:
+            faces.add(body.faces.item(i))
+    if faces.count != 1:
+        raise RuntimeError(f"{name}: expected exactly one cylindrical face, found {faces.count}")
+    info = adsk.fusion.ThreadInfo.create(False, False, THREAD_TYPE, THREAD_DES,
+                                         THREAD_CLASS_EXT, True)
+    inp = root.features.threadFeatures.createInput(faces, info)
+    inp.isModeled = True
+    feat = root.features.threadFeatures.add(inp)
+    feat.name = name
+    return feat
+
+
+def _make_screw(root, tag, x, y, tip_z, v):
+    """A printed screw: threaded shank first, so the thread lands on a clean
+    cylinder, then the spigot below it and the hex head above it."""
+    from adsk.fusion import FeatureOperations as FO
+
+    thread_len = v["screw_thread_len"]
+    spigot_len = v["screw_spigot_len"]
+    major = v["thread_major"] - v["thread_fit"]      # printed slack
+    shank_bot = tip_z + spigot_len
+    shank_top = shank_bot + thread_len
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_shank",
+                       _offset_plane(root, PLANE_HOLDER + "sc" + tag + "s", shank_bot))
+    sk.sketchCurves.sketchCircles.addByCenterRadius(_pt(x, y), (major / 2.0) * CM_PER_MM)
+    feat = _extrude(root, sk, FO.NewBodyFeatureOperation, thread_len,
+                    BODY_PREFIX + "sc_" + tag + "_shank_ext")
+    body = feat.bodies.item(0)
+    body.name = BODY_PREFIX + "screw_" + tag
+    _external_thread(root, body, BODY_PREFIX + "sc_" + tag + "_thread", v)
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_spigot",
+                       _offset_plane(root, PLANE_HOLDER + "sc" + tag + "p", tip_z))
+    sk.sketchCurves.sketchCircles.addByCenterRadius(
+        _pt(x, y), (v["screw_spigot_d"] / 2.0) * CM_PER_MM)
+    _extrude(root, sk, FO.JoinFeatureOperation, spigot_len,
+             BODY_PREFIX + "sc_" + tag + "_spigot_ext")
+
+    sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_head",
+                       _offset_plane(root, PLANE_HOLDER + "sc" + tag + "h", shank_top))
+    _hex(sk, x, y, v["screw_head_af"])
+    _extrude(root, sk, FO.JoinFeatureOperation, v["screw_head_h"],
+             BODY_PREFIX + "sc_" + tag + "_head_ext")
+    return body
 
 
 def build_holder(root, g: dict, v: dict) -> dict:
@@ -645,20 +771,12 @@ def build_holder(root, g: dict, v: dict) -> dict:
         _xy_rect(sk, {"x": arm, "y": plate_y})
     _extrude(root, sk, FO.JoinFeatureOperation, v["arm_thk"], BODY_PREFIX + "arms_ext")
 
-    # bolt clearance straight through, then the insert seat bored from the top
-    sk = _fresh_sketch(root, BODY_PREFIX + "bolts",
-                       _offset_plane(root, PLANE_HOLDER + "bolt", arm_bot))
-    for _t, _tw, _a, cx in sides:
-        sk.sketchCurves.sketchCircles.addByCenterRadius(
-            _pt(cx, clamp_y), (v["m3_shank_d"] / 2.0 + 0.2) * CM_PER_MM)
-    _extrude(root, sk, FO.CutFeatureOperation, v["arm_thk"] + 1.0, BODY_PREFIX + "bolts_cut")
-
-    sk = _fresh_sketch(root, BODY_PREFIX + "seats",
-                       _offset_plane(root, PLANE_HOLDER + "seat", arm_top - v["insert_len"]))
-    for _t, _tw, _a, cx in sides:
-        sk.sketchCurves.sketchCircles.addByCenterRadius(
-            _pt(cx, clamp_y), (v["insert_pilot_d"] / 2.0) * CM_PER_MM)
-    _extrude(root, sk, FO.CutFeatureOperation, v["insert_len"] + 0.1, BODY_PREFIX + "seats_cut")
+    # The clamp thread is PRINTED, per the plan: a tapped TR8x1.5 hole bored down
+    # from each arm's top face. The M3 heat-set inserts are only ever for the
+    # four board mounts, never the clamp.
+    for tag, _tw, _a, cx in sides:
+        _tapped_hole(root, body, BODY_PREFIX + "tap_" + tag, cx, clamp_y, arm_top, v,
+                     v["arm_thk"] + 1.0)
 
     # Cartridges: one body each. The compliant pad is left standing 0.2 mm below
     # the rigid rim by cutting the ring around it, so the rim bottoms on the card
@@ -687,22 +805,12 @@ def build_holder(root, g: dict, v: dict) -> dict:
         # centring dimple for the (bought) bolt tip
         _centring_dimple(root, "cart_" + tag, cx, clamp_y, v, cart_top)
 
-    # Printed thumb knobs. A hex pocket grips the bolt head so the knob drives
-    # it; the knob is its own printed part and simply lifts off.
+    # The printed clamp screws: hex head, TR8x1.5 shank, plain spigot driving
+    # the cartridge's centring dimple. At rest the spigot sits clamp_travel above
+    # the cartridge so the card can be offered up before tightening.
+    tip_z = cart_top + v["clamp_travel"]
     for tag, _tw, _a, cx in sides:
-        sk = _fresh_sketch(root, BODY_PREFIX + "knob_" + tag,
-                           _offset_plane(root, PLANE_HOLDER + "knob" + tag, arm_top))
-        sk.sketchCurves.sketchCircles.addByCenterRadius(
-            _pt(cx, clamp_y), (v["knob_od"] / 2.0) * CM_PER_MM)
-        feat = _extrude(root, sk, FO.NewBodyFeatureOperation, v["knob_h"],
-                        BODY_PREFIX + "knob" + tag + "_body")
-        feat.bodies.item(0).name = BODY_PREFIX + "knob_" + tag
-
-        sk = _fresh_sketch(root, BODY_PREFIX + "kpocket_" + tag,
-                           _offset_plane(root, PLANE_HOLDER + "kpocket" + tag, arm_top))
-        _hex(sk, cx, clamp_y, v["knob_pocket_af"])
-        _extrude(root, sk, FO.CutFeatureOperation, v["knob_pocket_depth"],
-                 BODY_PREFIX + "kpocket" + tag + "_cut")
+        _make_screw(root, tag, cx, clamp_y, tip_z, v)
 
     # Rail cartridge variant (A/B against the point pad). Same compliant-pad
     # idea, but a line contact instead of a point, so the card resists rotating
@@ -734,7 +842,7 @@ def build_holder(root, g: dict, v: dict) -> dict:
 
     return {"body": body.name, "boss_od": boss_od, "boss_h": boss_h,
             "half_x": half_x, "bar_y": plate_y, "arm_bot": arm_bot,
-            "arm_top": arm_top, "cart_top": cart_top,
+            "arm_top": arm_top, "cart_top": cart_top, "tip_z": tip_z,
             "cartridges": [BODY_PREFIX + "cart_" + t for t, _tw, _a, _cx in sides]}
 
 
@@ -798,7 +906,7 @@ def build_coupon(root, g: dict, v: dict) -> dict:
     from adsk.fusion import FeatureOperations as FO
 
     ox, oy = v["coupon_x"], v["coupon_y"]
-    plate_w, plate_d, plate_t = 100.0, 30.0, 3.0
+    plate_w, plate_d, plate_t = 130.0, 30.0, 3.0
     boss_od = v["insert_od"] + 2.0 * v["boss_wall"]
     boss_h = v["insert_len"]            # match the real boss depth
     n, span = 6, 15.0
@@ -826,7 +934,21 @@ def build_coupon(root, g: dict, v: dict) -> dict:
     _extrude(root, sk, FO.CutFeatureOperation, plate_t + boss_h + 1.0,
              BODY_PREFIX + "coupon_pilots_cut")
 
-    return {"body": BODY_PREFIX + "coupon", "pilots": [round(d, 2) for d in pilots]}
+    # Thread gauge: a tapped boss so the printed thread fit can be tested before
+    # committing the brackets. Print one screw alongside it and screw them together.
+    gx = ox + plate_w / 2.0 - 15.0
+    boss_h_g = v["screw_thread_len"] + 2.0
+    boss_od_g = v["thread_major"] + 2.0 * v["boss_wall"]
+    sk = _fresh_sketch(root, BODY_PREFIX + "gauge_boss",
+                       _offset_plane(root, PLANE_HOLDER + "gauge", plate_t))
+    sk.sketchCurves.sketchCircles.addByCenterRadius(_pt(gx, oy), (boss_od_g / 2.0) * CM_PER_MM)
+    _extrude(root, sk, FO.JoinFeatureOperation, boss_h_g, BODY_PREFIX + "gauge_boss_ext")
+    coupon_body = root.bRepBodies.itemByName(BODY_PREFIX + "coupon")
+    _tapped_hole(root, coupon_body, BODY_PREFIX + "gauge_tap", gx, oy, plate_t + boss_h_g, v,
+                 boss_h_g + 1.0)
+
+    return {"body": BODY_PREFIX + "coupon", "pilots": [round(d, 2) for d in pilots],
+            "gauge": gx}
 
 
 def export_snapshots(design, root, repo) -> list:
@@ -939,10 +1061,12 @@ def run(_ctx):
           f"Y {bb.minPoint.y * MM_PER_CM:+.3f} .. {bb.maxPoint.y * MM_PER_CM:+.3f}  "
           f"Z {bb.minPoint.z * MM_PER_CM:+.3f} .. {bb.maxPoint.z * MM_PER_CM:+.3f}")
     print(f"  volume {body.volume:.3f} cm^3 ({body.volume * 1000:.0f} mm^3)")
-    tip = holder["arm_top"] - vals["bolt_shank"]
+    tip = holder["tip_z"]
     print(f"  clamp: cartridge top z={holder['cart_top']:.2f}, "
           f"arm {holder['arm_bot']:.2f}..{holder['arm_top']:.2f}, "
-          f"bolt tip z={tip:.2f} (gap {tip - holder['cart_top']:+.2f})")
+          f"spigot tip z={tip:.2f} at rest ({tip - holder['cart_top']:+.2f} free)")
+    print(f"  clamp thread: {THREAD_DES} printed both sides "
+          f"(screw turned to D{vals['thread_major'] - vals['thread_fit']:.2f} for {vals['thread_fit']:.2f} of slack)")
     print(f"  bodies ({root.bRepBodies.count}): "
           + ", ".join(root.bRepBodies.item(i).name for i in range(root.bRepBodies.count)))
     tb = root.bRepBodies.itemByName(top["body"])

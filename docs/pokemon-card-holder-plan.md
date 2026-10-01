@@ -24,7 +24,7 @@ mount.
 | Retention | **Screw clamp with friction lock**: a loose nominal cradle sets rough placement, printed thumb-screw clamps take up the slack and lock it (fine trim, a few mm / ~2°) |
 | Clamp contact | **Over the card face (through the stack)**, confined to the outer margin **outside the art box** |
 | Clamp cartridges | **Swappable** contact elements — point pad vs. short rail — evaluated on a coupon |
-| Clamp material | **▸ M3 heat-set insert + stock M3 socket-cap bolt** in the arm (changed from a printed PETG thumb thread, 2026-09-30); PETG for the compliant face; PLA/PETG for the rigid bars — **no TPU on hand** |
+| Clamp material | **Printed thumb screw, PETG** — a *modelled* TR8x1.5 trapezoidal thread, printed axis-vertical. The M3 inserts and bolts are for the four board mounts **only**. PETG for the compliant face; PLA/PETG for the rigid bars — **no TPU on hand** |
 | Over-torque control | Printed **PETG flexure face** + a hard **travel stop** (~stack − 0.2 mm) |
 | Card plane | **Flush on the LCD glass** (no shroud) |
 
@@ -131,7 +131,7 @@ Source: `sycl-badge/kicad/v2/packages3D/JD-T18003-T01-Body.stp`, `docs/JD-T1800.
 | 19 | Insert flange OD / height | measure | 5.0 / small (kit label) |
 | 20 | Insert barrel length | measure | **6 or 8** (kit label) |
 | 21 | Bolt shank length | measure | **8 / 12 / 16 / 20** (kit label) |
-| 22 | Bolt head Ø / height | measure | ~5.5 / ~3.0 nominal M3 socket cap (verify) |
+| 22 | Bolt head Ø / height | measure | **Ø5.0** cylinder / ~3.0. A socket cap's *outside* is a cylinder with a hex recess — not a hex prism. Corrected 2026-09-30. Mounts only. |
 | 23 | Bolt thread pitch | 0.5 | 0.5 (M3 coarse) |
 
 ### Derived active-area position (#12)
@@ -231,11 +231,23 @@ Art-centred on the active area:
   constrain translation and rotation.
 * **Clamp contact** stays in the card's outer margin, **outside the art box**
   (side bands ≈6 mm, top zone ≈13 mm, bottom margin ≈43 mm).
-* **▸ Clamp screws are bought, not printed.** A **6 mm M3 heat-set insert** goes
-  into an 8 mm-thick arm, bored from its top face; a **stock M3 × 8 mm socket-cap
-  bolt** drives it. `arm_thk` equals the bolt's shank, so the tip lands exactly
-  at the arm's underside, 0.3 mm above the cartridge — no trimming, no helix to
-  model, and no PETG thread to creep. (Was: a printed PETG thumb thread.)
+* **▸ The clamp screw is printed**, as originally decided: a hex-head thumb screw
+  with a **modelled TR8x1.5** trapezoidal thread, screwed into a tapped hole bored
+  down from the arm's top face. Both threads are modelled, not cosmetic, so they
+  appear in the STEP and the STL. Three things to know: Fusion's trapezoidal table
+  offers only **TR8x1.5** at Ø8 (the plan's "2.5–3 mm pitch" would mean TR12x3 and
+  a much wider arm); Fusion models threads nominally, so the screw's shank is
+  turned to Ø7.85 for 0.15 mm of printed slack (`thread_fit`); and the arm is 12 mm
+  deep so the thread gets 2 mm walls rather than 1.25.
+* **The M3 heat-set inserts and M3 × 8 mm bolts are for the four board mounts
+  only** — never the clamp. An intermediate revision of this plan replaced the
+  printed thread with an insert and a bolt; that was wrong and has been reverted.
+* **▸ Modelled mating threads intersect in CAD.** The screw and the tapped hole
+  are shown at an arbitrary relative rotational phase, so their helices cross and
+  `analyzeInterference` reports ~0.03 cm³ on each clamp. That is a property of
+  showing mating threads, not a fit problem: in reality the screw threads in and
+  the phase self-selects. Exclude the screw/bracket pair when checking for real
+  interference. The coupon's thread gauge is the actual test.
 * **▸ Towers stand outside the card.** The sleeved card occupies x 120.66–186.66,
   y 70.35–164.35, so nothing above the card plane may sit inside it. Each tower
   is at x ≈ −41 / +45, with an arm reaching inward to a clamp axis at x ≈ −19.1 /

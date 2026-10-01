@@ -90,16 +90,20 @@ Nine bodies in one document, all regenerated from the tracked text:
 | --- | --- |
 | `BRK_bottom` | back plate on two Ø8 insert bosses at H4/H5, two clamp towers with arms |
 | `BRK_cart_l` / `BRK_cart_r` | point-pad cartridges, Ø14 × 2, compliant pad 0.2 mm proud of the rigid rim |
+| `BRK_screw_l` / `BRK_screw_r` | **printed** clamp screws: hex head, modelled TR8x1.5 trapezoidal thread, plain spigot tip |
 | `BRK_rail_l` / `BRK_rail_r` | rail cartridges, the A/B alternative: a line contact instead of a point |
-| `BRK_knob_l` / `BRK_knob_r` | printed thumb knobs, hex pocket gripping the bolt head |
 | `BRK_top` | top bar at H2/H3: bosses, raised bridge, edge hook |
-| `BRK_coupon` | fit-check coupon: six insert-pilot bosses sweeping 4.0–4.5 mm |
+| `BRK_coupon` | fit-check coupon: six insert-pilot bosses sweeping 4.0–4.5 mm, plus a tapped TR8x1.5 gauge boss |
 
-Nine bodies: the two cartridges and the two knobs are per-side parts, and the
-pad and rail cartridges are alternatives. The pad cartridges sit at the clamp
-axes (installed); the rails are **parked at y = −70 mm** with the coupon, so no
-two bodies share a space and a slicer can take any subset. `analyzeInterference`
-reports 0 overlapping pairs across all nine.
+Nine bodies: the cartridges and screws are per-side parts, and the pad and rail
+cartridges are alternatives. The pad cartridges sit at the clamp axes (installed);
+the rails are **parked at y = −70 mm** with the coupon, so no two bodies share a
+space and a slicer can take any subset.
+
+The clamp threads are **modelled**, not cosmetic — they are real geometry in the
+STEP and the STL. Mating threads are shown at an arbitrary relative phase, so the
+screw/bracket pair reports a small interference (≈0.03 cm³) that is an artifact of
+the display, not a fit problem; exclude that pair when checking for real ones.
 
 `build.py` also runs clearance checks against the extracted board data — nav,
 LED, LCD module, tower/art-box placement, hook capture, bolt-tip depth, and
