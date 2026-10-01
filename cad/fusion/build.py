@@ -706,13 +706,16 @@ def build_holder(root, g: dict, v: dict) -> dict:
 
     # Rail cartridge variant (A/B against the point pad). Same compliant-pad
     # idea, but a line contact instead of a point, so the card resists rotating
-    # about a clamp axis. Printed as extra bodies; pick one per side.
+    # about a clamp axis. Parked off the assembly rather than at the clamp axes:
+    # the pad cartridges already occupy those, and two bodies sharing a space
+    # would slice as overlapping geometry.
     for tag, _tw, _a, cx in sides:
         half_l = v["rail_body_len"] / 2.0
         half_w = v["rail_body_w"] / 2.0
+        cy = v["rail_park_y"]
         sk = _fresh_sketch(root, BODY_PREFIX + "rail_" + tag,
                            _offset_plane(root, PLANE_HOLDER + "rail" + tag, v["card_face_z"]))
-        _xy_rect(sk, {"x": (cx - half_l, cx + half_l), "y": (clamp_y - half_w, clamp_y + half_w)})
+        _xy_rect(sk, {"x": (cx - half_l, cx + half_l), "y": (cy - half_w, cy + half_w)})
         feat = _extrude(root, sk, FO.NewBodyFeatureOperation, v["cartridge_h"],
                         BODY_PREFIX + "rail" + tag + "_body")
         feat.bodies.item(0).name = BODY_PREFIX + "rail_" + tag
@@ -722,12 +725,12 @@ def build_holder(root, g: dict, v: dict) -> dict:
         sk = _fresh_sketch(root, BODY_PREFIX + "railrelief_" + tag,
                            _offset_plane(root, PLANE_HOLDER + "railrelief" + tag, v["card_face_z"]))
         _xy_rect(sk, {"x": (cx - half_l - 1.0, cx + half_l + 1.0),
-                      "y": (clamp_y - half_w - 1.0, clamp_y + half_w + 1.0)})
-        _xy_rect(sk, {"x": (cx - phl, cx + phl), "y": (clamp_y - phw, clamp_y + phw)})
+                      "y": (cy - half_w - 1.0, cy + half_w + 1.0)})
+        _xy_rect(sk, {"x": (cx - phl, cx + phl), "y": (cy - phw, cy + phw)})
         _extrude(root, sk, FO.CutFeatureOperation, v["pad_protrusion"],
                  BODY_PREFIX + "railrelief" + tag + "_cut", largest_only=True)
 
-        _centring_dimple(root, "rail_" + tag, cx, clamp_y, v, cart_top)
+        _centring_dimple(root, "rail_" + tag, cx, cy, v, cart_top)
 
     return {"body": body.name, "boss_od": boss_od, "boss_h": boss_h,
             "half_x": half_x, "bar_y": plate_y, "arm_bot": arm_bot,

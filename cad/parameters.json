@@ -109,7 +109,8 @@
       {"name": "rail_body_len", "expression": "16.0 mm", "status": "provisional", "comment": "rail cartridge variant: body length along X. At the symmetric clamp axes a 16 mm body stays on the sleeve with margin"},
       {"name": "rail_body_w", "expression": "10.0 mm", "status": "provisional", "comment": "rail cartridge variant: body width along Y"},
       {"name": "rail_len", "expression": "12.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad length, standing 0.2 mm proud of the rim"},
-      {"name": "rail_w", "expression": "4.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad width"}
+      {"name": "rail_w", "expression": "4.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad width"},
+      {"name": "rail_park_y", "expression": "-70.0 mm", "status": "provisional", "comment": "rails are parked off the assembly: the pad cartridges occupy the clamp axes, and two bodies in the same space would slice as overlapping geometry"}
     ],
     "top_bar": [
       {"name": "bridge_clear", "expression": "0.4 mm", "status": "provisional", "comment": "gap from the card plane to the top bridge's underside; the bridge must clear the card AND the START/SELECT actuators, which stand 5.0 mm proud"},

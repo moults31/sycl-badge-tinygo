@@ -96,7 +96,10 @@ Nine bodies in one document, all regenerated from the tracked text:
 | `BRK_coupon` | fit-check coupon: six insert-pilot bosses sweeping 4.0–4.5 mm |
 
 Nine bodies: the two cartridges and the two knobs are per-side parts, and the
-pad and rail cartridges are alternatives — print both, pick one per side.
+pad and rail cartridges are alternatives. The pad cartridges sit at the clamp
+axes (installed); the rails are **parked at y = −70 mm** with the coupon, so no
+two bodies share a space and a slicer can take any subset. `analyzeInterference`
+reports 0 overlapping pairs across all nine.
 
 `build.py` also runs clearance checks against the extracted board data — nav,
 LED, LCD module, tower/art-box placement, hook capture, bolt-tip depth, and
