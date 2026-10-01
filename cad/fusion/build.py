@@ -508,6 +508,20 @@ def checks(g: dict, v: dict) -> list[str]:
          f"hook bottom z={v['hook_z']:.2f} does not dip below the card plane {v['glass_z']:.2f}")
     need("hook clears the card edge", v["hook_clear"] > 0.0, "hook_clear must be positive")
 
+    # The support rib rests on the board's front face along its whole length, so
+    # nothing with pads may sit under it -- only solder-masked board.
+    rib_half = v["board_w"] / 2.0 - v["bar_inset"]
+    ry0 = v["rib_y"] - v["rib_thk"] / 2.0
+    ry1 = v["rib_y"] + v["rib_thk"] / 2.0
+    for k in g.get("front_keepouts", []):
+        if k.get("pads", 0) == 0:
+            continue
+        x0, y0, x1, y1 = k["rect"]
+        if x0 < rib_half and x1 > -rib_half and y0 < ry1 and y1 > ry0:
+            need("support rib rests on bare board", False,
+                 f"rib y {ry0:.2f}..{ry1:.2f} runs over {k['ref']} ({k['value']}), "
+                 f"which has pads (part y {y0:.2f}..{y1:.2f})")
+
     # The bolts pass through from the back, so the head and its spacer need clear
     # space there. Checked against the rotated footprint rectangles, not the
     # circles: the AAA holder's circle claims 32 mm of radius and false-alarms.
@@ -586,6 +600,16 @@ def build_holder(root, g: dict, v: dict) -> dict:
     for ref in ("H4", "H5"):
         circles.addByCenterRadius(_pt(*hole[ref]["at"]), (v["insert_pilot_d"] / 2.0) * CM_PER_MM)
     _extrude(root, sk, FO.CutFeatureOperation, v["glass_z"] + 1.0, BODY_PREFIX + "pilots_cut")
+
+    # Support rib. Without it the plate's underside is a ~106 mm unsupported
+    # span and the part needs support material. The rib runs from the board face
+    # up to the plate in the same 0..boss_h band as the bosses, so it is a
+    # vertical wall that prints for free, and it merges with both bosses. It
+    # touches only solder-masked board -- checked in checks().
+    sk = _fresh_sketch(root, BODY_PREFIX + "rib", root.xYConstructionPlane)
+    _xy_rect(sk, {"x": (-half_x, half_x),
+                  "y": (v["rib_y"] - v["rib_thk"] / 2.0, v["rib_y"] + v["rib_thk"] / 2.0)})
+    _extrude(root, sk, FO.JoinFeatureOperation, boss_h, BODY_PREFIX + "rib_ext")
 
     # --- clamp towers, arms and cartridges -----------------------------------
     #

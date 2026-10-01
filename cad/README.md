@@ -84,7 +84,7 @@ CAD involved.
 
 ## What the build produces
 
-Seven bodies in one document, all regenerated from the tracked text:
+Nine bodies in one document, all regenerated from the tracked text:
 
 | body | what |
 | --- | --- |

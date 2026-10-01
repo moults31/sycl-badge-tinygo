@@ -82,6 +82,8 @@
       {"name": "clamp_thread_pitch", "expression": "3.0 mm", "status": "provisional", "comment": "coarse trapezoidal thread, printed axis-vertical"},
       {"name": "boss_wall", "expression": "1.5 mm", "status": "provisional", "comment": "wall around the heat-set insert boss; 1.5 mm keeps a D8 boss inside the board edge (the holes are only ~4.05 mm in), and the insert's upper half is surrounded by the plate anyway"},
       {"name": "bar_inset", "expression": "2.0 mm", "status": "provisional", "comment": "how far the bracket's ends sit inboard of the board edge"},
+      {"name": "rib_y", "expression": "-24.0 mm", "status": "provisional", "comment": "support rib under the plate: at this Y it merges with both bosses, clears the LED row by >1 mm, and runs only over mask-covered board"},
+      {"name": "rib_thk", "expression": "2.0 mm", "status": "provisional", "comment": "support rib thickness. Without it the plate's underside is a ~106 mm unsupported span; with it the part prints with no support material and the span is broken into ~5 mm"},
       {"name": "bar_y0", "expression": "-31.5 mm", "status": "provisional", "comment": "bottom bracket rear edge Y: below the art window (-15.5) so it is on the card's blank margin, and above the board edge (-32.007) so it stays supported"},
       {"name": "bar_y1", "expression": "-21.0 mm", "status": "provisional", "comment": "bottom bracket front edge Y; clears the LCD module, whose lower edge is about -18.66"}
     ],

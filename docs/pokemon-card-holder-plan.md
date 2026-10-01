@@ -279,9 +279,12 @@ Art-centred on the active area:
    (`BRK_coupon`), so it cannot drift from the holder. Six insert-pilot bosses
    sweeping 4.0–4.5 mm.
 3. **Placement** — **done.** Card at centre x 156.35, +0.75 mm of nav clearance.
-4. **Model** — **done for the geometry as drawn.** Bottom bracket (plate on two
-   Ø8 insert bosses, two clamp towers with arms, two cartridges, two thumb
-   knobs) and top bar (bosses, raised bridge, edge hook). 7 bodies.
+4. **Model** — **done for the geometry as drawn.** Bottom bracket (support rib,
+   plate on two Ø8 insert bosses, two clamp towers with arms, two cartridges,
+   two thumb knobs) and top bar (bosses, raised bridge, edge hook). 9 bodies,
+   including the rail cartridge alternative. The plan's loose "cradle" is not
+   modelled: the short on-board bracket replaced the bottom-edge stop, so the
+   plate itself is the card's rest and no ledge is needed.
 5. **A/B** — point pad vs. short rail cartridge — **open**; the coupon prints the
    bosses, the cartridges still need a rail variant to compare against.
 6. **Full part** — print, install inserts, assemble. Add supports to the
@@ -309,10 +312,15 @@ Still open:
    ~1.6 mm. `led_h` is set to the conservative 1.6 and the clearance is checked;
    the plate's 3.6 mm underside clears either by ≥2.0 mm.
 4. Insert pilot diameter — the coupon sweeps 4.0–4.5 mm in 0.1 mm steps.
-5. **Printability (unresolved).** Both brackets are horizontal plates carried on
-   two bosses, so each has a ~100 mm unsupported span at its underside. Expect to
-   need support material, or print on a different axis. A print-orientation
-   decision is still outstanding.
+5. **Printability.** The bottom bracket is now **self-supporting**: a 2 mm rib
+   runs under the plate in the same 0–3.6 mm band as the bosses, breaking the
+   106 mm span and merging with both of them. It rests only on solder-masked
+   board — checked during the build against every front-side part that has pads.
+   The **top bar still needs support material.** Its bridge sits above the card
+   plane (it has to, to clear START/SELECT), and the card occupies the space
+   between the board and the bridge, so no rib can reach it. Either support the
+   bridge, or print the top bar on its side — noting that a Y-vertical
+   orientation puts the insert bores horizontal, which will hurt their roundness.
 6. **A/B:** point pad vs. short rail cartridge — **both are now modelled**
    (`BRK_cart_*` and `BRK_rail_*`), so the comparison is a print and a feel, not
    a redesign. Pick one per side after testing.
