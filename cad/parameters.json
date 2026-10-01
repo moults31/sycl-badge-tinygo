@@ -105,7 +105,7 @@
       {"name": "dimple_depth", "expression": "0.6 mm", "status": "provisional", "comment": "centring dimple in the cartridge top for the screw's spigot"},
       {"name": "thread_major", "expression": "8.0 mm", "status": "verified", "comment": "TR8 nominal major diameter. Fusion's ISO Metric Trapezoidal table offers only TR8x1.5, so the thread is 8 x 1.5 rather than the plan's 8 x 3, which does not exist; coarser would mean TR12x3 and a much wider arm."},
       {"name": "thread_pitch", "expression": "1.5 mm", "status": "verified", "comment": "TR8x1.5 pitch. Informational only: Fusion derives the form from the designation."},
-      {"name": "thread_fit", "expression": "0.15 mm", "status": "provisional", "comment": "radial slack printed into the screw. Fusion models both threads nominally, so a nominal pair would bind; the shank is turned to thread_major - thread_fit. Tune on the coupon's thread gauge."},
+      {"name": "thread_fit", "expression": "0.30 mm", "status": "provisional", "comment": "radial slack printed into the screw. First coupon printed TR8x1.5 nominal in and the screw needed real force to turn, so 0.15 was too tight. Now 0.30 (0.60 diametral). The coupon's gauge boss stays nominal, so only the screw needs a reprint to retune"},
       {"name": "screw_thread_len", "expression": "9.0 mm", "status": "provisional", "comment": "threaded length; spans the 8 mm arm with the screw at either end of its travel"},
       {"name": "screw_spigot_d", "expression": "3.0 mm", "status": "provisional", "comment": "plain spigot at the tip, driving the cartridge's centring dimple"},
       {"name": "screw_spigot_len", "expression": "1.0 mm", "status": "provisional", "comment": "spigot length"},

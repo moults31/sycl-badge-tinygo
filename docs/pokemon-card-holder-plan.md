@@ -128,7 +128,7 @@ Source: `sycl-badge/kicad/v2/packages3D/JD-T18003-T01-Body.stp`, `docs/JD-T1800.
 | 16 | Nav (U3) height above board | measure | 8.00 |
 | 17 | Tact height | ~3.45 | **3.45 body / 5.0 actuator** |
 | 18 | Insert barrel OD | measure | **5.0** (kit label) |
-| 19 | Insert flange OD / height | measure | 5.0 / small (kit label) |
+| 19 | Insert flange OD / height | measure | **Ø5.0 / none** — the barrel is the same diameter end to end, no protruding flange. User-inspected and confirmed 2026-09-30. No counterbore needed in the pilot. |
 | 20 | Insert barrel length | measure | **6 or 8** (kit label) |
 | 21 | Bolt shank length | measure | **8 / 12 / 16 / 20** (kit label) |
 | 22 | Bolt head Ø / height | measure | **Ø5.0** cylinder / ~3.0. A socket cap's *outside* is a cylinder with a hex recess — not a hex prism. Corrected 2026-09-30. Mounts only. |
