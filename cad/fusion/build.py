@@ -428,6 +428,27 @@ def _hex(sk, cx, cy, across_flats):
         lines.addByTwoPoints(_pt(*pts[i]), _pt(*pts[(i + 1) % 6]))
 
 
+def _radial_scale(root, body, center_point, factor, name):
+    """Scale a body in X/Y about its own axis, leaving Z (and the thread pitch) alone.
+
+    Fusion models an external thread at the designation's nominal size whatever
+    the base cylinder diameter is -- turning the shank down does NOT open the
+    thread. So the printed thread's clearance is applied here instead, as a
+    radial scale of the threaded shank.
+    """
+    import adsk.core
+
+    sc = root.features.scaleFeatures
+    coll = adsk.core.ObjectCollection.create()
+    coll.add(body)
+    f = adsk.core.ValueInput.createByReal(factor)
+    inp = sc.createInput(coll, center_point, f)
+    inp.setToNonUniform(f, f, adsk.core.ValueInput.createByReal(1.0))
+    feat = sc.add(inp)
+    feat.name = name
+    return feat
+
+
 def _clear_holder(root) -> int:
     """Delete the holder's features, then its sketches, then its plane.
 
@@ -663,18 +684,29 @@ def _make_screw(root, tag, x, y, tip_z, v):
 
     thread_len = v["screw_thread_len"]
     spigot_len = v["screw_spigot_len"]
-    major = v["thread_major"] - v["thread_fit"]      # printed diametral slack
+    # The shank is built at the thread's NOMINAL major. thread_fit is NOT a shank
+    # diameter: Fusion models the external thread at the designation's nominal
+    # size regardless of the base cylinder, so turning the shank down left the
+    # thread at D8 and did nothing. The slack is a radial scale below instead.
+    major = v["thread_major"]
     shank_bot = tip_z + spigot_len
     shank_top = shank_bot + thread_len
 
     sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_shank",
                        _offset_plane(root, PLANE_HOLDER + "sc" + tag + "s", shank_bot))
-    sk.sketchCurves.sketchCircles.addByCenterRadius(_pt(x, y), (major / 2.0) * CM_PER_MM)
+    circle = sk.sketchCurves.sketchCircles.addByCenterRadius(
+        _pt(x, y), (major / 2.0) * CM_PER_MM)
     feat = _extrude(root, sk, FO.NewBodyFeatureOperation, thread_len,
                     BODY_PREFIX + "sc_" + tag + "_shank_ext")
     body = feat.bodies.item(0)
     body.name = BODY_PREFIX + "screw_" + tag
     _external_thread(root, body, BODY_PREFIX + "sc_" + tag + "_thread", v)
+
+    # printed diametral slack: shrink the threaded shank radially (X/Y only),
+    # about its own axis, so the thread crest comes down by thread_fit
+    scale = (v["thread_major"] - v["thread_fit"]) / v["thread_major"]
+    _radial_scale(root, body, circle.centerSketchPoint, scale,
+                  BODY_PREFIX + "sc_" + tag + "_scale")
 
     sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_spigot",
                        _offset_plane(root, PLANE_HOLDER + "sc" + tag + "p", tip_z))
@@ -1066,7 +1098,7 @@ def run(_ctx):
           f"arm {holder['arm_bot']:.2f}..{holder['arm_top']:.2f}, "
           f"spigot tip z={tip:.2f} at rest ({tip - holder['cart_top']:+.2f} free)")
     print(f"  clamp thread: {THREAD_DES} printed both sides "
-          f"(screw turned to D{vals['thread_major'] - vals['thread_fit']:.2f} for {vals['thread_fit']:.2f} diametral slack)")
+          f"(screw thread scaled to D{vals['thread_major'] - vals['thread_fit']:.2f} for {vals['thread_fit']:.2f} diametral slack)")
     print(f"  bodies ({root.bRepBodies.count}): "
           + ", ".join(root.bRepBodies.item(i).name for i in range(root.bRepBodies.count)))
     tb = root.bRepBodies.itemByName(top["body"])
