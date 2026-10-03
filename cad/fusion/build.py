@@ -663,7 +663,7 @@ def _make_screw(root, tag, x, y, tip_z, v):
 
     thread_len = v["screw_thread_len"]
     spigot_len = v["screw_spigot_len"]
-    major = v["thread_major"] - v["thread_fit"]      # printed slack
+    major = v["thread_major"] - v["thread_fit"]      # printed diametral slack
     shank_bot = tip_z + spigot_len
     shank_top = shank_bot + thread_len
 
@@ -1066,7 +1066,7 @@ def run(_ctx):
           f"arm {holder['arm_bot']:.2f}..{holder['arm_top']:.2f}, "
           f"spigot tip z={tip:.2f} at rest ({tip - holder['cart_top']:+.2f} free)")
     print(f"  clamp thread: {THREAD_DES} printed both sides "
-          f"(screw turned to D{vals['thread_major'] - vals['thread_fit']:.2f} for {vals['thread_fit']:.2f} of slack)")
+          f"(screw turned to D{vals['thread_major'] - vals['thread_fit']:.2f} for {vals['thread_fit']:.2f} diametral slack)")
     print(f"  bodies ({root.bRepBodies.count}): "
           + ", ".join(root.bRepBodies.item(i).name for i in range(root.bRepBodies.count)))
     tb = root.bRepBodies.itemByName(top["body"])
