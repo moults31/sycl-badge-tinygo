@@ -1,17 +1,49 @@
 # sycl-badge-tinygo
 
+<p align="center">
+  <img src="assets/readme/cardshow-badge.jpg" alt="The SYCL Badge V2, a purple RP2354B handheld, showing its cartridge menu on a 160x128 LCD" width="48%">
+  <img src="assets/readme/cardshow-horsea.jpg" alt="The badge behind a Horsea trading card; the card's creature glows yellow through the card stock from the panel below" width="48%">
+</p>
+
 A minimal TinyGo firmware for the **SYCL Badge V2** — an RP2354B board (48-GPIO
 RP2350B die, 2 MB in-package flash) running the SYCL 2026 production
 (revision 2) hardware.
 
-On boot it shows a **cartridge menu** on the 160×128 LCD. Press **A** to launch
-a cartridge, and hold **Start+Select** for 250 ms to return to the menu.
+On boot it lights up a physical trading card laid on its 160×128 LCD — the
+**CARD SHOW** shinethrough lightshow — then becomes a **cartridge menu**. Press
+**A** to launch a cartridge, and hold **Start+Select** for 250 ms to return.
 Cartridges are Go values compiled into this one firmware; there is no UF2
 loader, no second app core, and no second runtime.
 
 > **This is a hobby project.** Code here is largely AI-generated and not
 > guaranteed to be human-reviewed. See [AI_USAGE.md](AI_USAGE.md) before flashing
 > anything.
+
+## CARD SHOW
+
+CARD SHOW is the main attraction: a physical trading card laid over the panel,
+lit **through** from behind. Light diffuses through the card stock, so the show
+does not reproduce the art — it drives a coarse, soft **glow mask** derived from
+the art box, tinted by a small palette and animated by independent effect layers
+(breathing, a diagonal holo sweep, drifting sparkles, an A-button flash), then
+mapped through one of ten colour looks. Select shows an alignment overlay so the
+glow can be lined up under the printed art.
+
+<p align="center">
+  <img src="assets/readme/cardshow-horsea.jpg" alt="A Horsea card held over the LCD; its yellow body glows while the blue background stays dim" width="31%">
+  <img src="assets/readme/cardshow-dedenne.jpg" alt="Two card stills: a Korean Dedenne card glowing pale through the panel" width="31%">
+  <img src="assets/readme/cardshow-badge.jpg" alt="The bare badge running the cartridge menu" width="31%">
+</p>
+
+Two different cards, same show: each is a photograph of a real card held over the
+panel and lit from behind. Full detail — effects, colour modes, the effects menu,
+asset generation, and calibration — is in [docs/cards.md](docs/cards.md).
+
+> **Card imagery.** Card source images and the generated assets are **not**
+> committed; they live in a gitignored, per-user library, and a fresh clone
+> builds the original synthetic sample instead. The card photographs here are of
+> physical hardware, not redistributed artwork. See [docs/cards.md](docs/cards.md)
+> and [docs/toolchain.md](docs/toolchain.md#one-card-library-across-worktrees).
 
 ## Quick start
 
@@ -30,8 +62,8 @@ needed.
 
 ## Cartridges
 
-The badge boots straight into **CARD SHOW** so the hero lightshow is up with no
-button press; **Start+Select** exits to the menu.
+The badge boots straight into **CARD SHOW** (see above) so the lightshow is up
+with no button press; **Start+Select** exits to the menu.
 
 | Cart | What it is |
 | --- | --- |
@@ -46,47 +78,6 @@ button press; **Start+Select** exits to the menu.
 deliberately fatal paths are the point. They are covered in
 [docs/go-demos.md](docs/go-demos.md). CARD SHOW is still the hero — the badge
 still boots straight into it.
-
-## CARD SHOW
-
-CARD SHOW is the app's centerpiece: a physical trading card laid over the panel,
-lit **through** from behind. Light diffuses through the card stock, so the show
-does not reproduce the art — it renders a coarse, soft **glow mask** tinted by a
-small palette and animated by independent effect layers (breathing, a diagonal
-holo sweep, drifting sparkles, an A-button flash), then mapped through one of
-ten colour looks. Select shows an alignment overlay so the glow can be lined up
-under the printed art.
-
-<!--
-Image plan (see docs/cards.md): put captures in assets/readme/ and uncomment the
-three blocks below, in this order. The animated GIF leads (it is the fastest way
-to show the effects and colour cycle), then the device photo, then the
-lightshow close-up. Prefer the synthetic sample or a blank card over real card
-art; card sources are gitignored and not distributed here (see README "Card
-imagery" note).
-
-![CARD SHOW in motion — effects and colour cycle](assets/readme/cardshow.gif)
-
-![The SYCL Badge V2 running CARD SHOW](assets/readme/cardshow-device.jpg)
-
-![Card shinethrough lightshow, up close](assets/readme/cardshow-glow.jpg)
--->
-
-*Animated capture to be added* — the effects layers and colour cycle in motion.
-
-*Device photo to be added* — the badge running CARD SHOW.
-
-*Close-up to be added* — the card shinethrough glow.
-
-Full detail — effects, colour modes, the effects menu, asset generation, and
-calibration — is in [docs/cards.md](docs/cards.md).
-
-> **Card imagery.** Card source images and the generated assets are **not**
-> committed; they live in a gitignored, per-user library, and a fresh clone
-> builds the original synthetic sample instead. Any real card shown in photos
-> here is a photograph of physical hardware, not redistributed artwork. See
-> [docs/cards.md](docs/cards.md) and
-> [docs/toolchain.md](docs/toolchain.md#one-card-library-across-worktrees).
 
 ## How it works
 
