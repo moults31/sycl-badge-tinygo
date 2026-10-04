@@ -236,8 +236,8 @@ func (c *CardShow) Start(p *Platform) {
 	c.calib = false
 	c.colorMap = colorRGB
 	c.mapToast = 0
-	c.breathe = true
-	c.holo = true
+	c.breathe = false
+	c.holo = false
 	c.sparkle = true
 	c.menu = false
 	c.menuRow = 0

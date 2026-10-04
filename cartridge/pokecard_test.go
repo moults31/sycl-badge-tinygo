@@ -81,9 +81,12 @@ func TestCardShowDrivesBacklight(t *testing.T) {
 	lib := []Factory{{Name: "CARD SHOW", New: NewCardShow}}
 	r, env, disp := newTestRunner(lib)
 
-	// Launch.
+	// Launch. Breathing is off by default, so enable it with B to exercise the
+	// envelope.
 	step(env, r, Buttons{A: true}, 1)
 	step(env, r, Buttons{}, 2)
+	step(env, r, Buttons{B: true}, 1)
+	step(env, r, Buttons{}, 1)
 
 	sawDim := false
 	for i := 0; i < 240; i++ {
@@ -301,40 +304,19 @@ func lum8(r, g, b uint8) int {
 	return (299*int(r) + 587*int(g) + 114*int(b)) / 1000
 }
 
-// TestCardShowTogglesBreathing checks B disables the breathing envelope: with
-// it off, the backlight holds steady instead of pulsing.
+// TestCardShowTogglesBreathing checks breathing is off by default, that the
+// backlight holds steady while it is off, and that B toggles the envelope on and
+// off.
 func TestCardShowTogglesBreathing(t *testing.T) {
 	p := newCardPlatform()
 	c := NewCardShowWith([]CardAsset{testCard("A", []byte{0xF0, 0xFF})}).(*CardShow)
 	c.Start(p)
-	if !c.breathe {
-		t.Fatal("breathing should default to on")
-	}
-
-	// See it breathe: the backlight must vary while left running.
-	seen := map[uint8]bool{}
-	for i := 0; i < 240; i++ {
-		p.prev = p.buttons
-		p.buttons = Buttons{}
-		c.Update(p)
-		seen[p.backlight] = true
-	}
-	if len(seen) < 2 {
-		t.Fatalf("breathing on produced a constant backlight (%d levels)", len(seen))
-	}
-
-	// B turns it off.
-	p.prev = Buttons{}
-	p.buttons = Buttons{B: true}
-	c.Update(p)
 	if c.breathe {
-		t.Fatal("B did not toggle breathing off")
+		t.Fatal("breathing should default to off")
 	}
-	p.prev = p.buttons
-	p.buttons = Buttons{}
-	c.Update(p)
 
-	// Now the backlight is steady frame to frame (no attack flash pending).
+	// With breathing off the backlight is steady frame to frame (no attack
+	// flash pending).
 	var first uint8
 	steady := true
 	for i := 0; i < 240; i++ {
@@ -348,15 +330,33 @@ func TestCardShowTogglesBreathing(t *testing.T) {
 		}
 	}
 	if !steady {
-		t.Fatal("breathing off still varied the backlight")
+		t.Fatal("breathing off varied the backlight")
 	}
 
-	// B again brings it back.
+	// B turns it on: the backlight must then vary while left running.
 	p.prev = Buttons{}
 	p.buttons = Buttons{B: true}
 	c.Update(p)
 	if !c.breathe {
-		t.Fatal("B did not toggle breathing back on")
+		t.Fatal("B did not toggle breathing on")
+	}
+	seen := map[uint8]bool{}
+	for i := 0; i < 240; i++ {
+		p.prev = p.buttons
+		p.buttons = Buttons{}
+		c.Update(p)
+		seen[p.backlight] = true
+	}
+	if len(seen) < 2 {
+		t.Fatalf("breathing on produced a constant backlight (%d levels)", len(seen))
+	}
+
+	// B again turns it back off.
+	p.prev = Buttons{}
+	p.buttons = Buttons{B: true}
+	c.Update(p)
+	if c.breathe {
+		t.Fatal("B did not toggle breathing back off")
 	}
 }
 

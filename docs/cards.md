@@ -78,10 +78,14 @@ legible on any look mode. Rows:
 ```
 COLOUR    FLUX
 CARD      HORSEA
-BREATHE   ON
-HOLO      ON
+BREATHE   OFF
+HOLO      OFF
 SPARKLE   ON
 ```
+
+BREATHE and HOLO default off and SPARKLE defaults on, so the show comes up with
+the steady art and only the drifting sparkles; turn the first two on in the menu
+for the full lightshow.
 
 Turning breathing off holds the per-pixel envelope at full and the backlight at
 full (the boost converter only lights predictably at full duty — see
