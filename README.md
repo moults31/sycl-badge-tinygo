@@ -258,8 +258,8 @@ make monitor PORT=/dev/cu.usbmodemXXXX    # or pick the port explicitly
   setup script and a bring-up checklist.
 - **[docs/toolchain.md](docs/toolchain.md)** — custom target, shared cards,
   bring-up self-test, SWD/OpenOCD, serial monitoring, CI.
-- **[docs/pokemon-card-holder-plan.md](docs/pokemon-card-holder-plan.md)** — the
-  mechanical card-holder design.
+- **[docs/pokemon-card-holder.md](docs/pokemon-card-holder.md)** — the mechanical
+  card-holder design: parts, dimensions, assembly, and how it was built.
 
 ## License
 
