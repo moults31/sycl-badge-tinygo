@@ -253,6 +253,9 @@ make monitor PORT=/dev/cu.usbmodemXXXX    # or pick the port explicitly
   carts: goroutines, the cooperative scheduler, the GC, and the fatal paths.
 - **[docs/go-demos-in-depth.md](docs/go-demos-in-depth.md)** — run the demos,
   then the real-world failure modes, defenses, and the Zig comparison.
+- **[docs/conference-runbook.md](docs/conference-runbook.md)** — rebuilding and
+  re-flashing on a fresh MacBook (fresh toolchain + SWD), with a `scripts/`
+  setup script and a bring-up checklist.
 - **[docs/toolchain.md](docs/toolchain.md)** — custom target, shared cards,
   bring-up self-test, SWD/OpenOCD, serial monitoring, CI.
 - **[docs/pokemon-card-holder-plan.md](docs/pokemon-card-holder-plan.md)** — the

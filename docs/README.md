@@ -14,3 +14,4 @@ when a specific question comes up.
 | [go-demos-in-depth.md](go-demos-in-depth.md) | Run the show-and-tell, then dig into the real-world failure modes, defenses, and the Zig reference comparison. |
 | [toolchain.md](toolchain.md) | Build the custom target, use the shared card library, bring up without buttons, flash over SWD, or watch serial. |
 | [pokemon-card-holder-plan.md](pokemon-card-holder-plan.md) | Follow the mechanical (CAD) design of the physical card holder. |
+| [conference-runbook.md](conference-runbook.md) | Rebuild and re-flash on a fresh MacBook at the conference, including a source fix. |
