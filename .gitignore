@@ -28,3 +28,5 @@ cad/export/*.png
 cad/fusion/*.f3d
 __pycache__/
 *.pyc
+
+.DS_Store

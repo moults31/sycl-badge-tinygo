@@ -53,14 +53,16 @@ PLANE_GLASS = "PL_glass"
 BODY_PREFIX = "BRK_"
 PLANE_HOLDER = "PL_brk_"
 
-# The clamp thread is printed, per the plan. Fusion's ISO Metric Trapezoidal
-# table offers only TR8x1.5 for a nominal 8 mm, so the plan's "coarse 2.5-3 mm
-# pitch" would mean TR12x3 and a much wider arm. TR8x1.5 is the same trapezoidal
-# form, just finer; it is coarser and stronger-rooted than M8x1.25.
-THREAD_TYPE = "ISO Metric Trapezoidal Threads"
-THREAD_DES = "TR8x1.5"
-THREAD_CLASS_EXT = "7e"
-THREAD_CLASS_INT = "7H"
+# The clamp thread is printed, per the plan. It was originally TR8x1.5, but that
+# trapezoidal form has only a 15 deg flank, which Bambu Studio reads as an
+# overhang and fills with support (a solid column inside each clamp bore).
+# Switched to ISO Metric M8x1.25: a 60 deg included / 30 deg flank thread, the
+# steepest symmetric standard form, so the flanks are far more self-supporting.
+# The bore also gets a 45 deg lead-in/lead-out chamfer (see _tapped_hole).
+THREAD_TYPE = "ISO Metric profile"
+THREAD_DES = "M8x1.25"
+THREAD_CLASS_EXT = "6g"
+THREAD_CLASS_INT = "6H"
 
 
 # ---------------------------------------------------------------- repo / inputs
@@ -534,6 +536,25 @@ def checks(g: dict, v: dict) -> list[str]:
     need("bridge clears the tacts", bridge_bot > v["tact_actuator_z"],
          f"bridge underside {bridge_bot:.2f} vs tact actuator {v['tact_actuator_z']:.2f}")
 
+    # The bridge roofs the START/SELECT tacts, so each needs a finger opening cut
+    # through it. Check the opening stays on the bridge, clears the hook, and is
+    # big enough to expose the switch.
+    hook_y1 = v["card_top_y"] + v["hook_clear"] + v["hook_thk"]
+    for ref in ("START1", "SELECT1"):
+        fp = next((k for k in g.get("front_keepouts", []) if k["ref"] == ref), None)
+        if fp is None:
+            need(f"{ref} is under the top bridge", False,
+                 f"no front footprint named {ref} to cut a button opening over")
+            continue
+        bx, by = fp["center"]
+        r = v["btn_cut_d"] / 2.0
+        need(f"{ref} opening fits the bridge", by + r <= hook_y1 - 0.5,
+             f"opening back edge {by + r:.2f} vs bridge back {hook_y1:.2f}")
+        need(f"{ref} opening clears the hook",
+             bx + r <= v["hook_x_l"] or bx - r >= v["hook_x_r"],
+             f"opening x {bx - r:.2f}..{bx + r:.2f} vs hook x "
+             f"{v['hook_x_l']:.2f}..{v['hook_x_r']:.2f}")
+
     need("hook captures the card", v["hook_z"] < v["glass_z"],
          f"hook bottom z={v['hook_z']:.2f} does not dip below the card plane {v['glass_z']:.2f}")
     need("hook clears the card edge", v["hook_clear"] > 0.0, "hook_clear must be positive")
@@ -572,21 +593,23 @@ def checks(g: dict, v: dict) -> list[str]:
          f"(shank {v['bolt_shank']:.2f}, board {v['board_thk']:.2f}, spacer {v['bolt_spacer']:.2f})")
 
     # The printed clamp screw: thread engagement in the arm at both ends of its
-    # travel, and the spigot never preloading the cartridge.
+    # travel, and the flat tip never preloading the cartridge. The shank runs all
+    # the way to the tip (no spigot), so the tip is a flat face at the end of the
+    # thread and meets the cartridge's flat top.
     arm_bot = v["card_face_z"] + v["cartridge_h"] + v["arm_clear"]
     arm_top = arm_bot + v["arm_thk"]
     cart_top = v["card_face_z"] + v["cartridge_h"]
-    shank = v["screw_thread_len"] + v["screw_spigot_len"]
+    shank = v["screw_thread_len"]
     tip_open = cart_top + v["clamp_travel"]
-    tip_clamped = cart_top - v["pad_protrusion"]
+    tip_clamped = cart_top
     for label, tip in (("at rest", tip_open), ("clamped", tip_clamped)):
-        lo, hi = tip + v["screw_spigot_len"], tip + shank
+        lo, hi = tip, tip + shank
         engage = min(hi, arm_top) - max(lo, arm_bot)
         need(f"clamp thread engaged {label}", engage >= 4.0,
              f"only {engage:.2f} mm of {THREAD_DES} sits in the arm "
              f"({arm_bot:.2f}..{arm_top:.2f}) {label}")
-    need("spigot clears the cartridge at rest", tip_open >= cart_top,
-         f"spigot tip z={tip_open:.2f} vs cartridge top {cart_top:.2f}")
+    need("flat tip clears the cartridge at rest", tip_open >= cart_top,
+         f"tip z={tip_open:.2f} vs cartridge top {cart_top:.2f}")
     need("the rim stop is the squeeze limit",
          abs((v["card_face_z"] - v["pad_protrusion"]) - v["clamp_stop_z"]) < 0.01,
          f"rim bottoms on the card at z={v['card_face_z'] - v['pad_protrusion']:.2f}, "
@@ -630,13 +653,13 @@ def _top_face_at(body, z_mm, x_mm, y_mm):
 def _tapped_hole(root, body, name, x, y, z_mm, v, depth_mm):
     """A printed internal thread: a tapped hole bored down from a top face.
 
-    The tap drill is derived (major - pitch = the TR8x1.5 minor) rather than
+    The tap drill is derived (major - pitch = the M8x1.25 minor) rather than
     typed in. Fusion models the thread physically only with isModeled.
 
     The depth is bounded rather than through-all on purpose: through-all follows
     every lump under the axis, and the plate sits 2.7 mm below the arm, where a
-    1.5 mm-pitch thread has nowhere near enough material. Fusion rejects that
-    with THREAD_REFERENCE_FACE_OFFSET_FAILED.
+    thread has nowhere near enough material. Fusion rejects that with
+    THREAD_REFERENCE_FACE_OFFSET_FAILED.
     """
     import adsk.core
 
@@ -659,7 +682,7 @@ def _tapped_hole(root, body, name, x, y, z_mm, v, depth_mm):
 
 
 def _external_thread(root, body, name, v):
-    """A modeled external trapezoidal thread on the body's one cylindrical face."""
+    """A modeled external M8x1.25 thread on the body's one cylindrical face."""
     import adsk.core
 
     faces = adsk.core.ObjectCollection.create()
@@ -679,17 +702,18 @@ def _external_thread(root, body, name, v):
 
 def _make_screw(root, tag, x, y, tip_z, v):
     """A printed screw: threaded shank first, so the thread lands on a clean
-    cylinder, then the spigot below it and the hex head above it."""
+    cylinder, then the hex head above it. The shank runs all the way down to the
+    tip, so the tip is a flat face at the end of the thread; the old 1 mm plain
+    spigot (a little nub at the tip) was removed at the user's request."""
     from adsk.fusion import FeatureOperations as FO
 
     thread_len = v["screw_thread_len"]
-    spigot_len = v["screw_spigot_len"]
     # The shank is built at the thread's NOMINAL major. thread_fit is NOT a shank
     # diameter: Fusion models the external thread at the designation's nominal
     # size regardless of the base cylinder, so turning the shank down left the
     # thread at D8 and did nothing. The slack is a radial scale below instead.
     major = v["thread_major"]
-    shank_bot = tip_z + spigot_len
+    shank_bot = tip_z
     shank_top = shank_bot + thread_len
 
     sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_shank",
@@ -707,13 +731,6 @@ def _make_screw(root, tag, x, y, tip_z, v):
     scale = (v["thread_major"] - v["thread_fit"]) / v["thread_major"]
     _radial_scale(root, body, circle.centerSketchPoint, scale,
                   BODY_PREFIX + "sc_" + tag + "_scale")
-
-    sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_spigot",
-                       _offset_plane(root, PLANE_HOLDER + "sc" + tag + "p", tip_z))
-    sk.sketchCurves.sketchCircles.addByCenterRadius(
-        _pt(x, y), (v["screw_spigot_d"] / 2.0) * CM_PER_MM)
-    _extrude(root, sk, FO.JoinFeatureOperation, spigot_len,
-             BODY_PREFIX + "sc_" + tag + "_spigot_ext")
 
     sk = _fresh_sketch(root, BODY_PREFIX + "sc_" + tag + "_head",
                        _offset_plane(root, PLANE_HOLDER + "sc" + tag + "h", shank_top))
@@ -803,7 +820,7 @@ def build_holder(root, g: dict, v: dict) -> dict:
         _xy_rect(sk, {"x": arm, "y": plate_y})
     _extrude(root, sk, FO.JoinFeatureOperation, v["arm_thk"], BODY_PREFIX + "arms_ext")
 
-    # The clamp thread is PRINTED, per the plan: a tapped TR8x1.5 hole bored down
+    # The clamp thread is PRINTED, per the plan: a tapped M8x1.25 hole bored down
     # from each arm's top face. The M3 heat-set inserts are only ever for the
     # four board mounts, never the clamp.
     for tag, _tw, _a, cx in sides:
@@ -837,9 +854,10 @@ def build_holder(root, g: dict, v: dict) -> dict:
         # centring dimple for the (bought) bolt tip
         _centring_dimple(root, "cart_" + tag, cx, clamp_y, v, cart_top)
 
-    # The printed clamp screws: hex head, TR8x1.5 shank, plain spigot driving
-    # the cartridge's centring dimple. At rest the spigot sits clamp_travel above
-    # the cartridge so the card can be offered up before tightening.
+    # The printed clamp screws: hex head, M8x1.25 shank, flat tip. At rest the
+    # tip sits clamp_travel above the cartridge so the card can be offered up
+    # before tightening. The old plain spigot is gone; the flat tip now bears on
+    # the cartridge's flat top (the dimple below is kept only for a bought bolt).
     tip_z = cart_top + v["clamp_travel"]
     for tag, _tw, _a, cx in sides:
         _make_screw(root, tag, cx, clamp_y, tip_z, v)
@@ -914,6 +932,24 @@ def build_top_bar(root, g: dict, v: dict) -> dict:
                        _offset_plane(root, PLANE_HOLDER + "hook", v["hook_z"]))
     _xy_rect(sk, {"x": (v["hook_x_l"], v["hook_x_r"]), "y": (hook_y0, hook_y1)})
     _extrude(root, sk, FO.JoinFeatureOperation, bridge_top - v["hook_z"], BODY_PREFIX + "hook_ext")
+
+    # Button access. START1 and SELECT1 sit on the board under this bridge, so
+    # without an opening the bridge roofs them in. Cut a finger opening through
+    # the bridge over each switch: a circle large enough to expose the 6 mm tact,
+    # centred on it, that breaks the bridge's front edge (bridge_y0) so the button
+    # is easy to find and press. Both switches are outboard of the card and the
+    # hook, so the openings clear both.
+    for ref in ("START1", "SELECT1"):
+        fp = next((k for k in g.get("front_keepouts", []) if k["ref"] == ref), None)
+        if fp is None:
+            continue
+        bx, by = fp["center"]
+        sk = _fresh_sketch(root, BODY_PREFIX + "btn_" + ref,
+                           _offset_plane(root, PLANE_HOLDER + "btn" + ref, bridge_bot))
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            _pt(bx, by), (v["btn_cut_d"] / 2.0) * CM_PER_MM)
+        _extrude(root, sk, FO.CutFeatureOperation, v["bridge_thk"] + 0.2,
+                 BODY_PREFIX + "btn_" + ref + "_cut")
 
     # blind insert seats, bored up from the board face; 0.8 mm of material left
     # above them so a bolt tip cannot emerge at the bridge's underside
@@ -1096,7 +1132,7 @@ def run(_ctx):
     tip = holder["tip_z"]
     print(f"  clamp: cartridge top z={holder['cart_top']:.2f}, "
           f"arm {holder['arm_bot']:.2f}..{holder['arm_top']:.2f}, "
-          f"spigot tip z={tip:.2f} at rest ({tip - holder['cart_top']:+.2f} free)")
+          f"tip z={tip:.2f} at rest ({tip - holder['cart_top']:+.2f} free)")
     print(f"  clamp thread: {THREAD_DES} printed both sides "
           f"(screw thread scaled to D{vals['thread_major'] - vals['thread_fit']:.2f} for {vals['thread_fit']:.2f} diametral slack)")
     print(f"  bodies ({root.bRepBodies.count}): "
