@@ -38,7 +38,14 @@ button press; **Start+Select** exits to the menu.
 | **CARD SHOW** | The hero cart. Backlights a physical card laid on the LCD with a glow mask, animation effects, and a colour-look cycle. Boots on. |
 | **PLASMA** | A full-screen animated plasma effect. |
 | **ZEROMAN** | A port of the reference firmware's platformer. |
+| **TASKS** | Show and tell: goroutines on the cooperative scheduler, including a deliberate no-yield stall and a fatal goroutine panic. |
+| **HEAP** | Show and tell: the GC drawn from `ReadMemStats`, with an armed demo that exhausts the heap. |
 | **PANIC TEST** | A diagnostic that panics on its first frame to exercise the recover path. |
+
+`TASKS` and `HEAP` are teaching aids, not production code: live numbers and
+deliberately fatal paths are the point. They are covered in
+[docs/go-demos.md](docs/go-demos.md). CARD SHOW is still the hero — the badge
+still boots straight into it.
 
 ## CARD SHOW
 
@@ -152,6 +159,10 @@ only the panel and the pins are replaced.
   **X**/**K** is B, **Enter** is Start, **Shift** is Select, **C** is the stick
   click, **Esc** releases everything. Hold **Start+Select** for 250 ms to leave a
   cart.
+- The teaching carts also use A/B/click: **TASKS** uses A for the no-yield
+  greedy demo and B twice for the goroutine panic; **HEAP** uses A to allocate,
+  B to free+collect, the stick click to leak, and a held A+B to exhaust the heap
+  (see [docs/go-demos.md](docs/go-demos.md)).
 - The green dot shows the live frame stream; the backlight percentage follows the
   carts that dim or pulse the panel (e.g. the card lightshow).
 
@@ -173,7 +184,7 @@ Extra flags pass through, e.g.
 | `display.go` | Self-contained ST7735S driver (SPI0) and backlight PWM. |
 | `hw.go`, `env_hw.go` | Adapt the panel and buttons to `Display`/`Env`. |
 | `env_demo.go` | `-tags=cartdemo` scripted buttons, for bring-up without hands. |
-| `cartridge/` | Hardware-free runtime: interface, menu/launch/recover loop, and carts. |
+| `cartridge/` | Hardware-free runtime: interface, menu/launch/recover loop, and carts (`registry.go` holds the shared library). |
 | `cmd/sim` | Scripted host renderer (writes PNG frames). |
 | `cmd/simui` | Interactive host simulator (browser window). |
 | `tools/` | Build-time asset generators (cards, zeroman art/stage, gopher). |
@@ -238,6 +249,10 @@ make monitor PORT=/dev/cu.usbmodemXXXX    # or pick the port explicitly
   hardware post-mortems.
 - **[docs/cards.md](docs/cards.md)** — the CARD SHOW lightshow in full.
 - **[docs/zeroman.md](docs/zeroman.md)** — the platformer port.
+- **[docs/go-demos.md](docs/go-demos.md)** — the TASKS and HEAP show-and-tell
+  carts: goroutines, the cooperative scheduler, the GC, and the fatal paths.
+- **[docs/go-demos-in-depth.md](docs/go-demos-in-depth.md)** — run the demos,
+  then the real-world failure modes, defenses, and the Zig comparison.
 - **[docs/toolchain.md](docs/toolchain.md)** — custom target, shared cards,
   bring-up self-test, SWD/OpenOCD, serial monitoring, CI.
 - **[docs/pokemon-card-holder-plan.md](docs/pokemon-card-holder-plan.md)** — the

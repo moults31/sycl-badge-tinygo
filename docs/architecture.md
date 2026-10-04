@@ -123,17 +123,29 @@ is fixed (everything in SRAM after `.bss`), and the path ends in
 
 The scheduler also offers an *idle* collection when it has no runnable task, but
 our `Step` loop is always runnable, so in practice our GC is allocation-driven.
-There are no calls to `runtime.GC()`, `debug.SetGCPercent`, or `ReadMemStats`
-anywhere in this repository.
+
+The production carts never call the GC directly. The HEAP teaching cart
+(`cartridge/heap.go`, see [go-demos.md](go-demos.md)) is the one place that
+calls `runtime.ReadMemStats` (to draw the heap bar) and `runtime.GC` (the
+explicit collect), and it deliberately drives the allocator into
+`runtimeFatal("out of memory")` to show that the fatal path is real.
 
 ## Do we have goroutines?
 
-Not in the application. The only `go` statement in the codebase is
-`go runner.Run()` in `cmd/simui/main.go`, the host browser simulator, which
-isolates the 60 fps loop from the HTTP server. On the badge, `main` is the sole
-logical goroutine; the second core hosts no goroutine at all. (`time.Sleep` is
-TinyGo's cooperative `sleep`: it parks the current task on a sleep queue and
-yields to the scheduler.)
+The production carts do not spawn goroutines, and on the badge `main` is the
+only long-lived task. The two host-only `go` statements are `go runner.Run()` in
+`cmd/simui/main.go` and the CFB serpentine in `cmd/sim`. The **TASKS teaching
+cart** (`cartridge/tasks.go`) does spawn four worker goroutines, entirely for
+show and tell; they self-terminate when the cart stops being updated (a
+heartbeat the frame loop bumps goes stale) so they do not leak across
+relaunches. See [go-demos.md](go-demos.md) for what they demonstrate.
+
+The important invariant holds: the second core hosts no application task.
+TinyGo's `tasks` scheduler is cooperative with `hasParallelism == false` and
+`runtime.NumCPU() == 1`; core 1 runs the same scheduler but is given no work, and
+exists only for the GC's stop-the-world phase. (`time.Sleep` is TinyGo's
+cooperative `sleep`: it parks the current task on a sleep queue and yields to
+the scheduler.)
 
 ## Memory budget and out-of-memory behaviour
 
@@ -160,7 +172,14 @@ runtime is built to be allocation-stable:
 
 If a future cart allocates per frame, that is the most likely source of a
 runaway heap. The mitigation is the same invariant the existing carts follow:
-allocate fixed extents once in `Start`, render in place.
+allocate fixed extents once in `Start`, render in place. The HEAP cart's leak
+mode is the deliberate exception, and it is the demo: watching the collector
+chase per-frame allocation is the point.
+
+The teaching carts also relax the allocation-free rule for `Start`: the TASKS
+cart spawns four goroutines and the HEAP cart has a channel and retained slices.
+Both are isolated to their own carts and bounded, and `make size` is the check
+that they did not move the heap floor enough to matter.
 
 ## Why panic recovery is same-core and allocation-free
 
