@@ -90,7 +90,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Gitleaks diffs github.event.before..HEAD on push, so a shallow clone
+      # (the actions/checkout default) fails to resolve the base commit and
+      # exits 1. Fetch the full history for this job.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
