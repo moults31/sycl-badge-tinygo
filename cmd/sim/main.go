@@ -51,12 +51,7 @@ func main() {
 		fatal(err)
 	}
 
-	lib := []cartridge.Factory{
-		{Name: "PLASMA", New: cartridge.NewPlasma},
-		{Name: "ZEROMAN", New: cartridge.NewZeroman},
-		{Name: "PANIC TEST", New: cartridge.NewPanicTest},
-		{Name: "CARD SHOW", New: cartridge.NewCardShow},
-	}
+	lib := cartridge.DefaultLibrary()
 
 	env := &stepEnv{stepMs: 16}
 	disp := &captureDisplay{}
@@ -82,6 +77,7 @@ func main() {
 		none  = cartridge.Buttons{}
 		a     = cartridge.Buttons{A: true}
 		down  = cartridge.Buttons{Down: true}
+		up    = cartridge.Buttons{Up: true}
 		chord = cartridge.Buttons{Start: true, Select: true}
 		sel   = cartridge.Buttons{Select: true}
 		right = cartridge.Buttons{Right: true}
@@ -123,35 +119,43 @@ func main() {
 	step(chord, 20)
 	step(none, 2)
 
-	// Select and launch the panic cart; the runtime must recover to the menu.
-	step(down, 1)
-	dump("09-menu-panic-selected.png")
+	// The menu is on ZEROMAN after the exit. Tap down to CARD SHOW (the last
+	// row), which exercises the scrolling window, then tap back to PANIC
+	// TEST. Each tap needs a release frame so it counts as a fresh press.
+	for i := 0; i < 4; i++ {
+		step(down, 1)
+		step(none, 1)
+	}
+	dump("09-menu-scrolled.png")
+	step(up, 1) // -> PANIC TEST
+	step(none, 1)
+	dump("10-menu-panic-selected.png")
 	step(a, 1)
 	step(none, 2)
-	dump("10-menu-after-panic.png")
+	dump("11-menu-after-panic.png")
 
-	// Select and launch the card lightshow, then capture every baked card
-	// (Left/Right cycle the library), a later breathing frame, an attack
-	// flash, and the calibration overlay.
+	// The recovered menu is still on PANIC TEST; step to CARD SHOW and launch
+	// it, then capture every baked card (Left/Right cycle the library), a
+	// later breathing frame, an attack flash, and the calibration overlay.
 	step(down, 1)
 	step(none, 1)
 	step(a, 1)
 	step(none, 1)
-	dump("11-card-00.png")
+	dump("12-card-00.png")
 	for i := 1; i < 5; i++ {
 		step(right, 1)
 		step(none, 1)
-		dump(fmt.Sprintf("12-card-%02d.png", i))
+		dump(fmt.Sprintf("13-card-%02d.png", i))
 	}
 	step(none, 90)
-	dump("13-card-breathing.png")
+	dump("14-card-breathing.png")
 	step(a, 1)
 	step(none, 2)
-	dump("14-card-attack.png")
+	dump("15-card-attack.png")
 	step(none, 30)
 	step(sel, 1)
 	step(none, 1)
-	dump("15-card-calibration.png")
+	dump("16-card-calibration.png")
 
 	fmt.Printf("wrote frames to %s/\n", *out)
 }

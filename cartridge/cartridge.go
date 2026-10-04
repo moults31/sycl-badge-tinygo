@@ -98,6 +98,27 @@ func (p *Platform) drawText(x, y int, s string, fg, bg uint16) {
 	}
 }
 
+// drawGlyph renders one 8x8 font cell at (x, y). It is the allocation-free
+// primitive behind the numeric helpers in demo_util.go, which draw values
+// without building transient strings (important for the HEAP cart, where a
+// per-frame allocation would perturb the very thing it visualises).
+func (p *Platform) drawGlyph(x, y int, ch byte, fg, bg uint16) {
+	if ch < 0x20 || ch > 0x7E {
+		ch = ' '
+	}
+	glyph := font8x8[ch-0x20]
+	for row := 0; row < 8; row++ {
+		bits := glyph[row]
+		for col := 0; col < 8; col++ {
+			c := bg
+			if bits&(0x80>>uint(col)) == 0 {
+				c = fg
+			}
+			p.pixel(x+col, y+row, c)
+		}
+	}
+}
+
 // --- runtime ---
 
 type runState int
@@ -123,6 +144,9 @@ type Runner struct {
 	sel    int
 	active Cartridge
 	crash  string
+
+	// menuTop is the first library row drawn in the scrolling menu.
+	menuTop int
 
 	chordSince uint32
 	chordArmed bool
@@ -318,25 +342,65 @@ var (
 	colErr    = RGB565(0xFF, 0x50, 0x50)
 )
 
+// Menu layout. The list is a scrolling window so the menu keeps working as the
+// library grows; five rows of 12px fit between the subtitle and the panic line.
+const (
+	menuVisRows = 5
+	menuRowH    = 12
+	menuListY   = 28
+)
+
+// scrollMenu slides the window so the highlighted row is always visible.
+func (r *Runner) scrollMenu() {
+	maxTop := len(r.lib) - menuVisRows
+	if maxTop < 0 {
+		maxTop = 0
+	}
+	if r.sel < r.menuTop {
+		r.menuTop = r.sel
+	}
+	if r.sel >= r.menuTop+menuVisRows {
+		r.menuTop = r.sel - menuVisRows + 1
+	}
+	if r.menuTop < 0 {
+		r.menuTop = 0
+	}
+	if r.menuTop > maxTop {
+		r.menuTop = maxTop
+	}
+}
+
 func (r *Runner) drawMenu() {
 	p := r.p
 	p.clear(colBg)
 
 	title := "SYCL BADGE"
-	p.drawText((Width-len(title)*8)/2, 4, title, colAccent, colBg)
+	p.drawText((Width-len(title)*8)/2, 2, title, colAccent, colBg)
 	sub := "SELECT A CART"
-	p.drawText((Width-len(sub)*8)/2, 18, sub, colDim, colBg)
+	p.drawText((Width-len(sub)*8)/2, 14, sub, colDim, colBg)
 
-	y := 42
-	for i, f := range r.lib {
+	r.scrollMenu()
+	top := r.menuTop
+	last := top + menuVisRows
+	if last > len(r.lib) {
+		last = len(r.lib)
+	}
+	for i := top; i < last; i++ {
+		y := menuListY + (i-top)*menuRowH
 		if i == r.sel {
-			p.fillRect(4, y-2, Width-8, 12, colSelBg)
-			p.drawText(10, y, f.Name, colText, colSelBg)
+			p.fillRect(4, y-2, Width-8, menuRowH, colSelBg)
+			p.drawText(10, y, r.lib[i].Name, colText, colSelBg)
 			p.drawText(Width-18, y, ">", colText, colSelBg)
 		} else {
-			p.drawText(10, y, f.Name, colText, colBg)
+			p.drawText(10, y, r.lib[i].Name, colText, colBg)
 		}
-		y += 14
+	}
+	// Scroll affordances: only drawn when rows are hidden on that side.
+	if top > 0 {
+		p.drawText(Width-10, menuListY, "^", colAccent, colBg)
+	}
+	if last < len(r.lib) {
+		p.drawText(Width-10, menuListY+(last-top-1)*menuRowH, "v", colAccent, colBg)
 	}
 
 	if r.crash != "" {
@@ -344,7 +408,7 @@ func (r *Runner) drawMenu() {
 		if len(msg) > 20 {
 			msg = msg[:20]
 		}
-		p.drawText(8, 88, msg, colErr, colBg)
+		p.drawText(8, 92, msg, colErr, colBg)
 	}
 
 	p.drawText(8, 104, "A RUN", colDim, colBg)

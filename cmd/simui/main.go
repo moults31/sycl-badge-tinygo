@@ -228,11 +228,14 @@ func main() {
 
 	s := newSim()
 	cardFactory, cardStatus := cardShowFactory(*cardsDir, *python)
-	lib := []cartridge.Factory{
-		{Name: "PLASMA", New: cartridge.NewPlasma},
-		{Name: "ZEROMAN", New: cartridge.NewZeroman},
-		{Name: "PANIC TEST", New: cartridge.NewPanicTest},
-		cardFactory,
+	// Start from the firmware's standard library and swap the baked CARD SHOW
+	// for the factory backed by the user's live card library.
+	lib := cartridge.DefaultLibrary()
+	for i := range lib {
+		if lib[i].Name == cardFactory.Name {
+			lib[i] = cardFactory
+			break
+		}
 	}
 	runner := cartridge.NewRunner(&env{sim: s, start: time.Now()}, display{s}, lib)
 	runner.SetFrameMillis(uint32(framePace / time.Millisecond))

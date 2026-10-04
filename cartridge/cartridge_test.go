@@ -175,6 +175,38 @@ func TestBootCartLaunchesNamedCart(t *testing.T) {
 	}
 }
 
+// TestMenuScrollsToSelection checks the scrolling window follows the highlight
+// once the library is taller than the visible rows.
+func TestMenuScrollsToSelection(t *testing.T) {
+	var lib []Factory
+	for i := 0; i < menuVisRows+3; i++ {
+		lib = append(lib, Factory{Name: "CART", New: NewPlasma})
+	}
+	r, env, disp := newTestRunner(lib)
+
+	// Walk to the last row.
+	for i := 1; i < len(lib); i++ {
+		step(env, r, Buttons{Down: true}, 1)
+		step(env, r, Buttons{}, 1)
+	}
+	if r.sel != len(lib)-1 {
+		t.Fatalf("selection = %d, want %d", r.sel, len(lib)-1)
+	}
+	if r.menuTop != len(lib)-menuVisRows {
+		t.Fatalf("menuTop = %d, want %d", r.menuTop, len(lib)-menuVisRows)
+	}
+
+	// The selected row must be inside the drawn window.
+	if r.sel < r.menuTop || r.sel >= r.menuTop+menuVisRows {
+		t.Fatalf("selected row %d outside window [%d,%d)", r.sel, r.menuTop, r.menuTop+menuVisRows)
+	}
+
+	// Frame should be non-blank.
+	if allZero(disp.last) {
+		t.Fatal("scrolled menu frame is blank")
+	}
+}
+
 // TestBootCartUnknownFallsBackToMenu checks an unknown boot name is ignored.
 func TestBootCartUnknownFallsBackToMenu(t *testing.T) {
 	r, env, _ := newTestRunner(plasmaLib())
