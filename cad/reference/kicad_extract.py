@@ -12,9 +12,9 @@ sketch by hand. Nothing here is measured, guessed, or drawn.
     python3 cad/reference/kicad_extract.py           # write board.json
     python3 cad/reference/kicad_extract.py --check   # also assert the plan's specs
 
-The plan of record is docs/pokemon-card-holder-plan.md; `--check` verifies the
-extracted geometry against the "Verified mechanical specs" section there, so a
-board revision or a typo in the plan fails loudly instead of silently.
+The design of record is docs/pokemon-card-holder.md; `--check` verifies the
+extracted geometry against the published board specs there, so a board revision
+or a typo in the doc fails loudly instead of silently.
 """
 
 from __future__ import annotations
@@ -30,8 +30,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_PATH = REPO_ROOT / "cad" / "reference" / "board.json"
 
-# The hardware repo is a separate checkout (see docs/pokemon-card-holder-plan.md,
-# "Source of truth for hardware"). Override with --board or $SYCL_BOARD_PCB.
+# The hardware repo is a separate checkout (see docs/pokemon-card-holder.md).
+# Override with --board or $SYCL_BOARD_PCB.
 CANDIDATES = [
     Path(os.environ["SYCL_BOARD_PCB"]) if os.environ.get("SYCL_BOARD_PCB") else None,
     Path.home() / "code" / "sycl_land" / "sycl-badge" / "kicad" / "v2" / "SYCL Badge 2024.kicad_pcb",
@@ -39,7 +39,7 @@ CANDIDATES = [
     REPO_ROOT.parent.parent / "sycl-badge" / "kicad" / "v2" / "SYCL Badge 2024.kicad_pcb",
 ]
 
-# The plan's "Verified mechanical specs" (docs/pokemon-card-holder-plan.md).
+# The published board specs (docs/pokemon-card-holder.md, Appendix B).
 #
 # These are the *nominal* numbers the plan publishes. The board file is the
 # source of truth, and it does not reproduce them exactly: the drawn outline is
@@ -57,7 +57,7 @@ CANDIDATES = [
 # notes, never silently rounded away. The model is built from the extracted
 # values, not from the nominal ones.
 EXPECTED = {
-    "_comment": "docs/pokemon-card-holder-plan.md > Verified mechanical specs > Board",
+    "_comment": "docs/pokemon-card-holder.md > Appendix B - Measured values > Board",
     "bbox": {"x": (96.406, 206.414), "y": (72.100, 136.106)},
     "size": (110.008, 64.006),
     "corner_radius": 3.0,

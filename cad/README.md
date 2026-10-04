@@ -3,7 +3,7 @@
 The 3D-printed holder that clips a penny-sleeved Pokémon card flat onto the SYCL
 Badge V2 LCD, so the panel shines through the card's art window.
 
-Design of record: [`../docs/pokemon-card-holder-plan.md`](../docs/pokemon-card-holder-plan.md).
+Design of record: [`../docs/pokemon-card-holder.md`](../docs/pokemon-card-holder.md).
 
 ## Source of truth
 
@@ -130,4 +130,4 @@ in Fusion's own parameter table rather than only in this repo.
 
 The provisional set is the clamp design itself: thread, flexure, and the
 structural bar dimensions. Those get settled by printing
-`docs/pokemon-card-holder-plan.md`'s fit-check coupon.
+`docs/pokemon-card-holder.md`'s fit-check coupon.
