@@ -12,3 +12,21 @@ sim-out/
 # by `make` and never checked in.
 assets/cards
 cartridge/cards_data.go
+
+# Card holder CAD. The tracked source of truth is the build script
+# (cad/fusion/build.py) plus the parameter table, the derived reference geometry
+# (cad/parameters.json, cad/reference/board.json) and the target document name
+# (cad/fusion/target.json). Fusion documents live in Autodesk's cloud and cannot
+# be saved locally as live files, so the only local CAD outputs are generated.
+# The STEP is committed on purpose: it is ASCII, diffable, and the one copy of
+# the geometry that needs neither Fusion nor an Autodesk account. Everything
+# else is a build product.
+cad/export/*.stl
+cad/export/*.3mf
+cad/export/*.f3d
+cad/export/*.png
+cad/fusion/*.f3d
+__pycache__/
+*.pyc
+
+.DS_Store

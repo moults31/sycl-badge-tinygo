@@ -1,0 +1,137 @@
+{
+  "format": "sycl-card-holder-params/1",
+  "units": "mm",
+  "note": [
+    "Single source of numbers for the card holder model. cad/fusion/build.py",
+    "pushes these into the Fusion document as user parameters and builds every",
+    "feature from them, so no dimension is ever typed into a sketch by hand.",
+    "",
+    "Coordinate system for the model (see build.py):",
+    "  origin  = board centre",
+    "  +X      = right            (KiCad +x)",
+    "  +Y      = up               (KiCad -y; KiCad's y grows downward)",
+    "  Z = 0   = board front face (F.Cu) -- the LCD/card side",
+    "  Z < 0   = into the board; Z > 0 = out toward the card",
+    "",
+    "status: verified = traced to a measurement or the hardware repo.",
+    "        provisional = a starting point to be tuned on the coupon."
+  ],
+  "sections": {
+    "board": [
+      {"name": "board_w", "expression": "110.008 mm", "status": "verified", "comment": "PCB outline width (plan: 110.008)"},
+      {"name": "board_h", "expression": "64.006 mm", "status": "verified", "comment": "PCB outline height (plan: 64.006)"},
+      {"name": "board_corner_r", "expression": "3.0 mm", "status": "verified", "comment": "nominal corner radius; drawn arcs run R3.00-R3.12"},
+      {"name": "board_thk", "expression": "1.6 mm", "status": "verified", "comment": "FR4 thickness, 4-layer"},
+      {"name": "hole_bore", "expression": "3.0 mm", "status": "verified", "comment": "mounting-hole bore, plated"},
+      {"name": "hole_grid_x", "expression": "101.88 mm", "status": "verified", "comment": "nominal hole pitch; exact per-hole XY comes from board.json"},
+      {"name": "hole_grid_y", "expression": "55.91 mm", "status": "verified", "comment": "nominal hole pitch; holes are not a perfect rectangle"}
+    ],
+    "stack": [
+      {"name": "glass_z", "expression": "6.00 mm", "status": "verified", "comment": "LCD glass top above board front face = card rest plane"},
+      {"name": "stack_thk", "expression": "0.40 mm", "status": "verified", "comment": "penny-sleeved card stack (measured)"},
+      {"name": "card_face_z", "expression": "glass_z + stack_thk", "status": "verified", "comment": "top of the card stack"},
+      {"name": "clamp_stop_z", "expression": "glass_z + stack_thk - 0.2 mm", "status": "verified", "comment": "hard travel stop, bounds clamp force without TPU"}
+    ],
+    "card": [
+      {"name": "card_w", "expression": "63.0 mm", "status": "verified", "comment": "bare card width (measured 63.0)"},
+      {"name": "card_h", "expression": "87.5 mm", "status": "verified", "comment": "bare card height (measured 87.5)"},
+      {"name": "sleeve_w", "expression": "66.0 mm", "status": "verified", "comment": "sleeved card width (measured 66.0)"},
+      {"name": "sleeve_h", "expression": "94.0 mm", "status": "verified", "comment": "sleeved card height (measured 94.0)"},
+      {"name": "art_w", "expression": "57.0 mm", "status": "verified", "comment": "art window width, worst case in the target set + 1 mm margin each side. Measured off the SV-era template (Horsea, Tandemaus/Oswaldo Kato) at 54.6 mm; all nine target cards share that layout, JP and Western alike."},
+      {"name": "art_h", "expression": "38.5 mm", "status": "verified", "comment": "art window height, worst case + 1 mm margin. Measured 35.2 mm on the SV-era template"},
+      {"name": "art_inset_l", "expression": "3.0 mm", "status": "verified", "comment": "measured 4.4 mm from the card left, minus 1 mm margin; clamp contact must stay outside this"},
+      {"name": "art_inset_r", "expression": "3.0 mm", "status": "verified", "comment": "measured 4.0 mm from the card right, minus 1 mm margin"},
+      {"name": "art_inset_t", "expression": "5.0 mm", "status": "verified", "comment": "measured 6.5 mm from the card top, minus 1 mm margin; this anchors the placement"},
+      {"name": "art_centre_top", "expression": "art_inset_t + art_h / 2", "status": "verified", "comment": "art window centre, measured down from the card's top edge; 24.25 mm on the SV-era template"},
+      {"name": "sleeve_margin_x", "expression": "(sleeve_w - card_w) / 2", "status": "verified", "comment": "sleeve overhang each side of the card; a penny sleeve is symmetric"},
+      {"name": "sleeve_margin_y", "expression": "(sleeve_h - card_h) / 2", "status": "verified", "comment": "sleeve overhang top and bottom of the card"}
+    ],
+    "placement": [
+      {"name": "active_cx", "expression": "2.25 mm", "status": "verified", "comment": "LCD active-area centre, from board centre"},
+      {"name": "active_cy", "expression": "4.25 mm", "status": "verified", "comment": "LCD active-area centre, from board centre"},
+      {"name": "active_w", "expression": "34.5 mm", "status": "verified", "comment": "lit active width (measured landscape)"},
+      {"name": "active_h", "expression": "27.5 mm", "status": "verified", "comment": "lit active height (measured landscape)"},
+      {"name": "lcd_w", "expression": "45.82 mm", "status": "provisional", "comment": "LCD module outline long axis, driven landscape so it lies along X (datasheet 34.0 x 45.82)"},
+      {"name": "lcd_h", "expression": "34.0 mm", "status": "provisional", "comment": "LCD module outline short axis along Y. The module is a build property: no PCB footprint fixes it, so it is placed concentric with the active area"},
+      {"name": "card_cx_plan", "expression": "4.19 mm", "status": "verified", "comment": "sleeved-card centre X: art-centred, then shifted +1.94 off the nav (plan)"},
+      {"name": "nav_clearance", "expression": "0.75 mm", "status": "verified", "comment": "extra shift so the sleeve's left edge clears the nav, which otherwise sits flush at 0"},
+      {"name": "card_cx", "expression": "card_cx_plan + nav_clearance", "status": "verified", "comment": "sleeved-card centre X, final = 4.94"},
+      {"name": "card_top_y", "expression": "active_cy + art_centre_top + sleeve_margin_y", "status": "verified", "comment": "sleeved-card top edge; derived so the art window sits centred on the active area"},
+      {"name": "card_bot_y", "expression": "card_top_y - sleeve_h", "status": "verified", "comment": "sleeved-card bottom edge: this overhangs the board by 30.25 mm, which is accepted"}
+    ],
+    "controls": [
+      {"name": "nav_top_z", "expression": "8.00 mm", "status": "verified", "comment": "5-way nav top; the only front-side feature above the card plane"},
+      {"name": "tact_actuator_z", "expression": "5.00 mm", "status": "verified", "comment": "tact switch actuator height"},
+      {"name": "tact_body_z", "expression": "3.45 mm", "status": "verified", "comment": "tact switch body height"},
+      {"name": "led_h", "expression": "1.6 mm", "status": "provisional", "comment": "SK6812MINI height above the board. The repo's neopixel.stp says 0.75, the common part is ~1.6; the conservative value is used so the clearance check has margin"},
+      {"name": "led_clearance", "expression": "0.5 mm", "status": "provisional", "comment": "minimum gap required between the bracket plate's underside and the tallest front part under it"}
+    ],
+    "fasteners": [
+      {"name": "insert_od", "expression": "5.0 mm", "status": "verified", "comment": "M3 heat-set insert barrel OD (Preciva kit)"},
+      {"name": "insert_len", "expression": "6.0 mm", "status": "verified", "comment": "barrel length: the kit has 6 and 8, but boss+plate depth is only glass_z = 6.0 mm, so an 8 mm insert would break through into the board"},
+      {"name": "insert_pilot_d", "expression": "4.2 mm", "status": "verified", "comment": "pilot bore for the M3 OD5x6 heat-set insert. Coupon sweep 4.0-4.5 all seated cleanly with no cracks; 4.2 chosen for near-max grip with margin against FDM hole variation and boss cracking"},
+      {"name": "m3_shank_d", "expression": "3.0 mm", "status": "verified", "comment": "M3 shank; line-to-line in the 3.0 board holes (fits, photo-verified)"},
+      {"name": "m3_head_d", "expression": "5.0 mm", "status": "verified", "comment": "M3 socket-cap head is a CYLINDER, OD 5.0 mm -- the hex is a socket recess, not the outside. User-measured. Used only for the four board mounts."},
+      {"name": "m3_head_h", "expression": "3.0 mm", "status": "provisional", "comment": "M3 socket-cap head height; verify with calipers"},
+      {"name": "bolt_spacer", "expression": "0.5 mm", "status": "verified", "comment": "spacer under each bolt head: an 8 mm bolt spans 1.6 mm of board + 6.4 mm into a 6.0 mm insert, so the tip would poke through at the card plane by 0.4 mm; the spacer pulls it back"}
+    ],
+    "design": [
+      {"name": "side_clearance", "expression": "0.35 mm", "status": "provisional", "comment": "per-side slide clearance; plan says 0.3-0.4 until the coupon"},
+      {"name": "backplate_thk", "expression": "2.4 mm", "status": "provisional", "comment": "printed back plate, set coplanar with the 6.00 glass plane"},
+      {"name": "bar_w", "expression": "12.0 mm", "status": "provisional", "comment": "bracket bar width"},
+      {"name": "clamp_thread_od", "expression": "8.0 mm", "status": "provisional", "comment": "printed thumb-screw major diameter"},
+      {"name": "clamp_thread_pitch", "expression": "3.0 mm", "status": "provisional", "comment": "coarse trapezoidal thread, printed axis-vertical"},
+      {"name": "boss_wall", "expression": "1.5 mm", "status": "provisional", "comment": "wall around the heat-set insert boss; 1.5 mm keeps a D8 boss inside the board edge (the holes are only ~4.05 mm in), and the insert's upper half is surrounded by the plate anyway"},
+      {"name": "bar_inset", "expression": "2.0 mm", "status": "provisional", "comment": "how far the bracket's ends sit inboard of the board edge"},
+      {"name": "rib_y", "expression": "-24.0 mm", "status": "provisional", "comment": "support rib under the plate: at this Y it merges with both bosses, clears the LED row by >1 mm, and runs only over mask-covered board"},
+      {"name": "rib_thk", "expression": "2.0 mm", "status": "provisional", "comment": "support rib thickness. Without it the plate's underside is a ~106 mm unsupported span; with it the part prints with no support material and the span is broken into ~5 mm"},
+      {"name": "bar_y0", "expression": "-31.8 mm", "status": "provisional", "comment": "bottom bracket rear edge Y: below the art window (-15.5) so it is on the card's blank margin, and inside the board edge (-32.007) so it stays supported"},
+      {"name": "bar_y1", "expression": "-19.8 mm", "status": "provisional", "comment": "bottom bracket front edge Y; clears the LCD module. bar_y0/bar_y1 are 12 mm apart so the printed TR8 thread has 2 mm walls in the arm rather than 1.25"}
+    ],
+    "clamp": [
+      {"name": "clamp_x_l", "expression": "card_cx - 24 mm", "status": "provisional", "comment": "left clamp axis X, symmetric about the card centre; the contact is below the art window so only the rectangle matters, and the clamp is on the sleeve"},
+      {"name": "clamp_x_r", "expression": "card_cx + 24 mm", "status": "provisional", "comment": "right clamp axis X, symmetric about the card centre; 48 mm apart so two clamps resist card rotation"},
+      {"name": "tower_x_l", "expression": "-41.0 mm", "status": "provisional", "comment": "left tower centre X; clear of the sleeve's left edge so nothing above the card plane intersects the card"},
+      {"name": "tower_x_r", "expression": "45.0 mm", "status": "provisional", "comment": "right tower centre X; clear of the sleeve's right edge"},
+      {"name": "tower_w", "expression": "8.0 mm", "status": "provisional", "comment": "tower width along X; the arm is the same width and reaches inward to the clamp"},
+      {"name": "arm_end_over", "expression": "6.0 mm", "status": "provisional", "comment": "how far the arm runs past the clamp axis, so the insert has material all round"},
+      {"name": "arm_thk", "expression": "8.0 mm", "status": "provisional", "comment": "arm thickness; deliberately equal to bolt_shank so a stock bolt's tip lands at the arm's underside"},
+      {"name": "arm_clear", "expression": "0.3 mm", "status": "provisional", "comment": "gap between the arm's underside and the cartridge top at rest"},
+      {"name": "cartridge_h", "expression": "2.0 mm", "status": "provisional", "comment": "cartridge height from its contact face to its top"},
+      {"name": "cartridge_od", "expression": "14.0 mm", "status": "provisional", "comment": "cartridge diameter; loose and swappable, so it needs no socket"},
+      {"name": "pad_od", "expression": "6.0 mm", "status": "provisional", "comment": "compliant pad diameter; the pad is the only part that touches the card"},
+      {"name": "pad_protrusion", "expression": "0.2 mm", "status": "provisional", "comment": "how far the pad stands below the rigid rim; the rim then bottoms on the card and bounds the squeeze, giving clamp_stop_z"},
+      {"name": "bolt_shank", "expression": "8.0 mm", "status": "verified", "comment": "kit's shortest M3 socket cap, used for the four BOARD MOUNTS only; with the 0.5 mm spacer its tip lands at z=5.9 in a 6 mm insert"},
+      {"name": "dimple_depth", "expression": "0.6 mm", "status": "provisional", "comment": "centring dimple in the cartridge top, kept only for a bought bolt tip; the printed screw now has a flat tip and bears on the flat top around it"},
+      {"name": "thread_major", "expression": "8.0 mm", "status": "verified", "comment": "M8 nominal major diameter. Retired the trapezoidal TR8x1.5: its 15 deg flank read as an overhang and the slicer filled each clamp bore with support. ISO Metric M8x1.25 has a 60 deg included / 30 deg flank, the steepest symmetric standard form, so it prints far more self-supporting."},
+      {"name": "thread_pitch", "expression": "1.25 mm", "status": "verified", "comment": "M8x1.25 pitch. Informational only: Fusion derives the form from the designation. The tap drill is major - pitch = 6.75 mm."},
+      {"name": "thread_fit", "expression": "0.60 mm", "status": "provisional", "comment": "diametral slack on the printed thread, applied as a radial scale of the threaded shank by (thread_major - thread_fit)/thread_major. Fusion models the external TR8x1.5 at nominal D8 whatever the base cylinder, so the earlier shank-diameter approach was a no-op (measured crest still D8.0). 0.60 = 0.30 radial. Gauge boss stays nominal, so only the screw reprints to retune"},
+      {"name": "screw_thread_len", "expression": "10.0 mm", "status": "provisional", "comment": "threaded length; spans the 8 mm arm with the screw at either end of its travel. Now runs all the way to the tip: the old 1 mm plain spigot was removed, so the tip is a flat face at the end of the thread (per request)."},
+      {"name": "screw_head_af", "expression": "20.0 mm", "status": "provisional", "comment": "thumb screw head across flats; hexagonal so it grips fingers and needs no knurl"},
+      {"name": "screw_head_h", "expression": "6.0 mm", "status": "provisional", "comment": "thumb screw head height"},
+      {"name": "clamp_travel", "expression": "1.5 mm", "status": "provisional", "comment": "how far the flat tip sits above the cartridge at rest, so the card can be offered up before tightening"},
+      {"name": "rail_body_len", "expression": "16.0 mm", "status": "provisional", "comment": "rail cartridge variant: body length along X. At the symmetric clamp axes a 16 mm body stays on the sleeve with margin"},
+      {"name": "rail_body_w", "expression": "10.0 mm", "status": "provisional", "comment": "rail cartridge variant: body width along Y"},
+      {"name": "rail_len", "expression": "12.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad length, standing 0.2 mm proud of the rim"},
+      {"name": "rail_w", "expression": "4.0 mm", "status": "provisional", "comment": "rail cartridge variant: contact pad width"},
+      {"name": "rail_park_y", "expression": "-70.0 mm", "status": "provisional", "comment": "rails are parked off the assembly: the pad cartridges occupy the clamp axes, and two bodies in the same space would slice as overlapping geometry"}
+    ],
+    "top_bar": [
+      {"name": "bridge_clear", "expression": "0.4 mm", "status": "provisional", "comment": "gap from the card plane to the top bridge's underside; the bridge must clear the card AND the START/SELECT actuators, which stand 5.0 mm proud"},
+      {"name": "bridge_thk", "expression": "3.0 mm", "status": "provisional", "comment": "top bridge thickness"},
+      {"name": "btn_cut_d", "expression": "9.0 mm", "status": "provisional", "comment": "finger opening cut through the top bridge over each of START1/SELECT1; exposes the 6 mm tact and breaks the bridge's front edge so the button is reachable"},
+      {"name": "bridge_y0", "expression": "25.0 mm", "status": "provisional", "comment": "top bridge inboard edge Y, clear of the LCD module's upper edge at about 27.16"},
+      {"name": "hook_clear", "expression": "0.35 mm", "status": "provisional", "comment": "gap between the card's top edge (33.75) and the hook's inner face"},
+      {"name": "hook_thk", "expression": "2.0 mm", "status": "provisional", "comment": "hook leg thickness along Y"},
+      {"name": "hook_z", "expression": "5.0 mm", "status": "provisional", "comment": "bottom of the hook leg; below the card plane (6.0) so it actually captures the card's top edge"},
+      {"name": "hook_x_l", "expression": "-25.0 mm", "status": "provisional", "comment": "hook leg left edge X"},
+      {"name": "hook_x_r", "expression": "35.0 mm", "status": "provisional", "comment": "hook leg right edge X"}
+    ],
+    "coupon": [
+      {"name": "coupon_x", "expression": "0.0 mm", "status": "provisional", "comment": "coupon centre X; parked clear of the holder so it prints as its own body"},
+      {"name": "coupon_y", "expression": "-95.0 mm", "status": "provisional", "comment": "coupon centre Y, well clear of the holder"},
+      {"name": "coupon_pilot_min", "expression": "4.0 mm", "status": "provisional", "comment": "smallest insert pilot on the coupon sweep"},
+      {"name": "coupon_pilot_step", "expression": "0.1 mm", "status": "provisional", "comment": "pilot sweep step; six bosses cover 4.0 to 4.5 as the plan suggests"}
+    ]
+  }
+}

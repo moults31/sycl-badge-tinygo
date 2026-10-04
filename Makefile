@@ -34,7 +34,7 @@ endif
 CARD_MANIFEST ?= $(CARDS_DIR)/manifest.json
 CARD_OUT      ?= cartridge/cards_data.go
 
-.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim sim-ui test card-data card-sample cards-dir cards-link
+.PHONY: all build install-board uninstall-board flash flash-swd run-swd monitor clean size check-openocd sim sim-ui test card-data card-sample cards-dir cards-link cad-ref cad-check cad-build
 
 all: build
 
@@ -146,3 +146,35 @@ monitor:
 
 clean: uninstall-board
 	rm -f hello.uf2 hello.elf
+	rm -f cad/export/*.stl cad/export/*.3mf cad/export/*.f3d
+
+# --- Card holder CAD ---------------------------------------------------------
+#
+# The tracked source of truth is cad/parameters.json (every dimension) plus
+# cad/fusion/build.py (the geometry), never the .f3d. Reference geometry is
+# derived from the hardware repo's KiCad file as text, so it needs no Fusion:
+#
+#   make cad-ref     regenerate cad/reference/board.json from the .kicad_pcb
+#   make cad-check   ... and assert it is the board the plan describes
+#
+# Building the model does need Fusion, and Fusion has no local documents: the
+# design lives in Autodesk's cloud and can only be exported as a snapshot. So
+# the document is scratch state that cad/fusion/build.py rebuilds from the
+# tracked text; cad/fusion/target.json names it. `make cad-build` only
+# syntax-checks, because adsk.* exists nowhere else.
+#
+# Override the hardware checkout with: make cad-ref CAD_BOARD=/path/to.kicad_pcb
+CAD_BOARD ?=
+CAD_BOARD_ARG = $(if $(CAD_BOARD),--board "$(CAD_BOARD)",)
+
+cad-ref:
+	python3 cad/reference/kicad_extract.py $(CAD_BOARD_ARG)
+
+cad-check:
+	python3 cad/reference/kicad_extract.py --check $(CAD_BOARD_ARG)
+
+cad-build:
+	python3 -m py_compile cad/fusion/build.py
+	python3 cad/fusion/build.py --check
+	@echo "cad/fusion/build.py is valid; run it inside Fusion to rebuild the model"
+
